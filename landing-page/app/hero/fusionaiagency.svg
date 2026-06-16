@@ -1,0 +1,23 @@
+export const FusionLogoSVG = () => (
+  <svg width="240" height="60" viewBox="0 0 240 60" fill="none" className="group">
+    <defs>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+        <feMerge>
+          <feMergeNode in="coloredBlur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+    
+    {/* Icon with hover glow transition */}
+    <rect 
+      x="5" y="10" width="40" height="40" rx="10" fill="#D4FF33" 
+      className="transition-all duration-300 group-hover:[filter:url(#glow)]"
+    />
+    
+    <text x="25" y="38" text-anchor="middle" className="fill-black font-mono font-black text-2xl">F</text>
+    <text x="58" y="28" className="fill-white font-sans font-extrabold text-xl tracking-tighter uppercase">FUSION AI</text>
+    <text x="58" y="45" className="fill-zinc-500 font-mono text-[9px] tracking-[0.25em] uppercase opacity-70">Neural Systems</text>
+  </svg>
+);

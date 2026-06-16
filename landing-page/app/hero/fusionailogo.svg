@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="500" height="500" rx="40" fill="#09090b"/>
+
+  <defs>
+    <filter id="squareGlow" x="-30%" y="-30%" width="160%" height="160%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <linearGradient id="geminiAI" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4e8cff" /> <stop offset="50%" stop-color="#8033ff" /> <stop offset="100%" stop-color="#f87171" /> </linearGradient>
+  </defs>
+
+  <g transform="translate(115, 215)">
+    
+    <rect x="0" y="0" width="75" height="75" rx="20" fill="#D4FF33" filter="url(#squareGlow)"/>
+    
+    <text x="37.5" y="55" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="54" fill="black">F</text>
+
+    <text x="100" y="32" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="34" letter-spacing="-0.04em" fill="white" style="text-transform: uppercase;">FUSION</text>
+    
+    <text x="235" y="32" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="34" letter-spacing="0.05em" fill="url(#geminiAI)" style="text-transform: uppercase;">AI</text>
+
+    <text x="100" y="62" font-family="monospace, Courier" font-weight="500" font-size="14" letter-spacing="0.32em" fill="#71717a" style="text-transform: uppercase;">NEURAL SYSTEMS</text>
+  </g>
+
+  <text x="250" y="470" text-anchor="middle" font-family="monospace, Courier" font-size="10" letter-spacing="0.25em" fill="#27272a" style="text-transform: uppercase;">Fusion Works LLC • NYC</text>
+</svg>

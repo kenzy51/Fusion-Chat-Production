@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="500" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="500" height="500" rx="40" fill="#09090b"/>
+
+  <defs>
+    <filter id="neonGlow" x="-35%" y="-35%" width="170%" height="170%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="100" y="100" width="300" height="300" rx="85" fill="#d4ff33" filter="url(#neonGlow)"/>
+
+  <text 
+    x="250" 
+    y="250" 
+    dominant-baseline="central" 
+    text-anchor="middle" 
+    font-family="Arial, Helvetica, sans-serif" 
+    font-weight="900" 
+    font-size="220" 
+    fill="black"
+  >F</text>
+</svg>
