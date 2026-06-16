@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AiAgentModule } from './ai-agent/ai-agent.module';
-import { LeadsController } from './leads/leads.controller';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -24,7 +23,7 @@ import { SessionsModule } from './sessions/session.module';
     UserModule,
     AuthModule,
   ],
-  controllers: [AppController, LeadsController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}

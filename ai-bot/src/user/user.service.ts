@@ -10,26 +10,33 @@ export class UserService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
   ) {}
 
-  async createUser(tenantId: string, username: string, cleartextPassword: string, role: string = 'ADMIN') {
-    const exists = await this.userModel.findOne({ username }).exec();
+  async createUser(tenantId: string, name: string, email: string, cleartextPassword: string, role: string = 'ADMIN') {
+    // 💡 FIX: Query by email to match your actual database schema property mapping
+    const exists = await this.userModel.findOne({ email }).exec();
     if (exists) {
-      throw new BadRequestException('Username already taken');
+      throw new BadRequestException('This email is already taken');
     }
 
     const hashedPassword = await bcrypt.hash(cleartextPassword, 12);
 
     const newUser = new this.userModel({
       tenantId,
-      username,
-      password: hashedPassword,
+      name,
+      email,
+      passwordHash: hashedPassword, // Make sure this matches user.schema.ts (e.g. passwordHash)
       role,
     });
 
     const savedUser = await newUser.save();
-    return { id: savedUser._id, username: savedUser.username, role: savedUser.role };
+    
+    return { 
+      id: savedUser._id, 
+      email: savedUser.email, 
+      role: savedUser.role 
+    };
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    return this.userModel.findOne({ username }).exec();
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
   }
 }

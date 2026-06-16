@@ -11,10 +11,12 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const ai_agent_module_1 = require("./ai-agent/ai-agent.module");
-const leads_controller_1 = require("./leads/leads.controller");
-const calls_module_1 = require("./calls/calls.module");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
+const tenant_module_1 = require("./tenant/tenant.module");
+const user_module_1 = require("./user/user.module");
+const auth_module_1 = require("./auth/auth.module");
+const session_module_1 = require("./sessions/session.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -22,14 +24,17 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             ai_agent_module_1.AiAgentModule,
-            calls_module_1.CallsModule,
+            session_module_1.SessionsModule,
             config_1.ConfigModule.forRoot(),
             mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI, {
                 family: 4,
                 serverSelectionTimeoutMS: 5000,
             }),
+            tenant_module_1.TenantModule,
+            user_module_1.UserModule,
+            auth_module_1.AuthModule,
         ],
-        controllers: [app_controller_1.AppController, leads_controller_1.LeadsController],
+        controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })
 ], AppModule);

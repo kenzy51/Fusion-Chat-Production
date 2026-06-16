@@ -3,26 +3,24 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class User extends Document {
-  // 🔒 Теперь required: false, потому что у SUPER_ADMIN нет привязки к одному тенанту!
-  @Prop({ 
-    type: MongooseSchema.Types.ObjectId, 
-    ref: 'Tenant', 
-    required: false, 
-    index: true 
-  })
-  tenantId?: string; // Опционально для супер-админа, обязательно для остальных
+  @Prop({ required: true })
+  name: string;
 
   @Prop({ required: true, unique: true, index: true })
-  username: string;
+  email: string;
 
   @Prop({ required: true })
-  password: string; 
+  passwordHash: string; 
 
-  @Prop({ 
-    required: true, 
-    enum: ['SUPER_ADMIN', 'ADMIN', 'VIEWER'], 
-    default: 'ADMIN' 
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
   })
+  tenantId: string; 
+
+  @Prop({ enum: ['admin', 'agent'], default: 'admin' })
   role: string;
 }
 

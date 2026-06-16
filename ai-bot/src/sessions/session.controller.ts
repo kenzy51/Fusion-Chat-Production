@@ -1,6 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Controller, Get, Post, Body, Query, Param, Patch, NotFoundException, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  Param,
+  Patch,
+  NotFoundException,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { SessionsService } from './session.service'; // Ensure your callsService is renamed/updated to SessionsService
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('sessions')
 export class SessionsController {
@@ -12,9 +25,12 @@ export class SessionsController {
    * Crucial for the Next.js business dashboard.
    */
   @Get()
+  @UseGuards(JwtAuthGuard) 
   async getTenantSessions(@Query('tenantId') tenantId: string) {
     if (!tenantId) {
-      throw new NotFoundException('A valid tenantId query parameter is mandatory.');
+      throw new NotFoundException(
+        'A valid tenantId query parameter is mandatory.',
+      );
     }
     // Repurposes your old 'getHistoryByBusiness' database logic safely using tenantId
     return this.sessionsService.getHistoryByTenant(tenantId);
@@ -28,7 +44,9 @@ export class SessionsController {
   async getSessionDetails(@Param('sessionId') sessionId: string) {
     const session = await this.sessionsService.findBySessionId(sessionId);
     if (!session) {
-      throw new NotFoundException(`Chat session thread [${sessionId}] could not be located.`);
+      throw new NotFoundException(
+        `Chat session thread [${sessionId}] could not be located.`,
+      );
     }
     return session;
   }
@@ -44,24 +62,31 @@ export class SessionsController {
     @Param('sessionId') sessionId: string,
     @Body('status') status: string,
   ) {
-    const validStatuses = ['active', 'completed', 'abandoned', 'human_escalated'];
+    const validStatuses = [
+      'active',
+      'completed',
+      'abandoned',
+      'human_escalated',
+    ];
     if (!validStatuses.includes(status)) {
       throw new NotFoundException(`Invalid status transition parameter.`);
     }
 
-    const updatedSession = await this.sessionsService.updateStatus(sessionId, status);
+    const updatedSession = await this.sessionsService.updateStatus(
+      sessionId,
+      status,
+    );
     if (!updatedSession) {
       throw new NotFoundException(`Target session context missing.`);
     }
     return { status: 'success', data: updatedSession };
   }
 
-  /**
-   * 🚩 PATCH /sessions/:sessionId/flag
-   * Allows business users to flag specific customer transcripts for quality assurance or support triage.
-   */
   @Patch(':sessionId/flag')
-  async flagSession(@Param('sessionId') sessionId: string, @Body('isFlagged') isFlagged: boolean) {
+  async flagSession(
+    @Param('sessionId') sessionId: string,
+    @Body('isFlagged') isFlagged: boolean,
+  ) {
     return this.sessionsService.updateFlagState(sessionId, isFlagged);
   }
 }

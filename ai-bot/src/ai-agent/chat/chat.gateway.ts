@@ -5,26 +5,44 @@ import {
   OnGatewayDisconnect
 } from "@nestjs/websockets";
 import { ChatService } from "../gemini/chat.service";
+import * as crypto from 'crypto';
 
 @WebSocketGateway({ path: '/chat-stream', cors: { origin: '*' } })
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ChatGateway implements OnGatewayConnection {
   constructor(private readonly chatService: ChatService) {}
 
-  handleConnection(client: any) {
-    console.log(`📡 New Multi-Tenant Web Chat Socket Connected: ${client.id}`);
+  async handleConnection(client: any) {
+    client.id = crypto.randomUUID();
+    console.log(`📡 New Web Chat Socket Connected: ${client.id}`);
+
+    // We can extract a default test tenant ID, or expect it via query params:
+    // const tenantId = client.handshake?.query?.tenantId; 
+    const defaultTestTenantId = "66708b76e1a47b2c93d9ef12"; 
+
+    // Fetch the tenant's profile to get their specific welcome message
+    const tenantConfig = await this.chatService.getTenantConfig(defaultTestTenantId);
+    const greeting = tenantConfig?.voiceConfig?.greeting || "Hello! How can I help you today?";
+
+    // Send the initial handshake payload with the system greeting
+    client.send(JSON.stringify({
+      event: 'session_established',
+      sessionId: client.id,
+      greeting: greeting
+    }));
   }
 
   @SubscribeMessage('message')
   async handleMessage(client: any, payload: any) {
-    const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    const data = parsed.data || parsed; 
     
-    const tenantId = data.tenantId; // Passed implicitly from the web widget code
+    const tenantId = data.tenantId; 
+    const sessionId = data.sessionId || client.id;
+    
     if (!tenantId) {
-      client.send(JSON.stringify({ event: 'error', data: 'Missing tenant configuration identifier.' }));
+      client.send(JSON.stringify({ event: 'error', data: 'Missing tenant identifier.' }));
       return;
     }
-
-    console.log(`💬 Message received for Tenant [${tenantId}]: ${data.text}`);
 
     const aiResponse = await this.chatService.generateTextOnlyResponse(
       data.text,
@@ -36,9 +54,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       event: 'ai_response',
       data: aiResponse
     }));
-  }
 
-  handleDisconnect(client: any) {
-    console.log(`❌ Chat Socket Connection Severed: ${client.id}`);
+    const currentMessageWindow = [
+      ...(data.history || []),
+      { role: 'user', content: data.text },
+      { role: 'assistant', content: aiResponse }
+    ];
+
+    this.chatService.logSessionToDatabase(sessionId, currentMessageWindow, tenantId)
+      .catch(err => console.error(`❌ Delayed DB Session log failed:`, err));
   }
 }

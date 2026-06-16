@@ -16,7 +16,8 @@ export class ChatService implements OnModuleInit {
   constructor(
     private readonly sessionsService: SessionsService,
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
-    @InjectModel(ChatSession.name) private readonly sessionModel: Model<ChatSession>,
+    @InjectModel(ChatSession.name)
+    private readonly sessionModel: Model<ChatSession>,
   ) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
     this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -96,7 +97,19 @@ export class ChatService implements OnModuleInit {
       return "I'm having trouble connecting to the systems database. Please try again in a moment.";
     }
   }
+ 
+  async getTenantConfig(tenantId: string): Promise<any> {
+    const cacheKey = `tenant:${tenantId}:config`;
+    const cached = await this.redis.get(cacheKey);
 
+    if (cached) return JSON.parse(cached);
+
+    const tenant = await this.tenantModel.findById(tenantId).exec();
+    if (tenant) {
+      await this.redis.set(cacheKey, JSON.stringify(tenant), 'EX', 300);
+    }
+    return tenant;
+  }
   /**
    * Logs conversational analytics asynchronously back to MongoDB when a session completes
    */

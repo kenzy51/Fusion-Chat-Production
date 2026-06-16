@@ -1,6 +1,6 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -12,12 +12,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+
   async validate(payload: any) {
+    if (!payload.tenantId) {
+      throw new UnauthorizedException('Malformed token security context: Missing Tenancy Anchor');
+    }
+    
     return { 
       userId: payload.sub, 
-      username: payload.username, 
-      role: payload.role, 
-      tenantId: payload.tenantId 
+      email: payload.email, 
+      tenantId: payload.tenantId, 
+      role: payload.role 
     };
   }
 }

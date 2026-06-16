@@ -2,20 +2,14 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
 @Schema({ _id: false })
-class VoiceConfig {
-  @Prop({ required: true, default: 'PBZ6PhGMbBIzGFQBGF5u' })
-  voiceId: string;
-
-  @Prop({ required: true })
+export class ChatConfig {
+  @Prop({ default: 'Hello, welcome to our website! How can we assist you today?' }) 
   greeting: string;
 
-  @Prop({ required: true })
-  voicePrompt: string;
-
-  @Prop({ required: true })
+  @Prop({ default: 'You are a helpful automated assistant.' }) 
   chatPrompt: string;
 
-  @Prop({ required: true })
+  @Prop({ default: '' }) 
   knowledgeBase: string;
 
   @Prop({ type: [String], default: [] })
@@ -33,8 +27,8 @@ export class Tenant extends Document {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ type: VoiceConfig, required: true })
-  voiceConfig: VoiceConfig;
+  @Prop({ type: ChatConfig, default: () => ({}) })
+  chatConfig: ChatConfig;
 }
 
 export const TenantSchema = SchemaFactory.createForClass(Tenant);

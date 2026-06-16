@@ -8,19 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiAgentModule = void 0;
 const common_1 = require("@nestjs/common");
-const voice_gateway_1 = require("./voice/voice.gateway");
-const calls_module_1 = require("../calls/calls.module");
-const voice_service_1 = require("./gemini/voice.service");
+const session_module_1 = require("../sessions/session.module");
 const config_1 = require("./config/config");
 const chat_gateway_1 = require("./chat/chat.gateway");
+const chat_service_1 = require("./gemini/chat.service");
+const tenant_module_1 = require("../tenant/tenant.module");
 let AiAgentModule = class AiAgentModule {
 };
 exports.AiAgentModule = AiAgentModule;
 exports.AiAgentModule = AiAgentModule = __decorate([
     (0, common_1.Module)({
-        imports: [(0, common_1.forwardRef)(() => calls_module_1.CallsModule)],
-        providers: [voice_service_1.VoiceService, voice_gateway_1.VoiceGateway, config_1.ConfigStore, chat_gateway_1.ChatGateway],
-        exports: [voice_service_1.VoiceService, config_1.ConfigStore],
+        imports: [
+            (0, common_1.forwardRef)(() => session_module_1.SessionsModule),
+            tenant_module_1.TenantModule,
+        ],
+        providers: [chat_service_1.ChatService, chat_gateway_1.ChatGateway, config_1.ConfigStore],
+        exports: [chat_service_1.ChatService, config_1.ConfigStore],
     })
 ], AiAgentModule);
 //# sourceMappingURL=ai-agent.module.js.map

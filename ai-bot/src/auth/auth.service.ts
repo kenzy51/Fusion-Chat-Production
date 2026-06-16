@@ -1,42 +1,93 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UserService } from '../user/user.service';
-import { JwtService } from '@nestjs/jwt';
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/user/user.schema';
+import { Tenant } from 'src/tenant/tenant.schema';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userService: UserService,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
     private readonly jwtService: JwtService,
   ) {}
-
-  // 1. Проверка подлинности учетных данных
-  async validateUser(username: string, cleartextPassword: string): Promise<any> {
-    const user = await this.userService.findByUsername(username);
-    if (user && (await bcrypt.compare(cleartextPassword, user.password))) {
-      // Исключаем пароль из возвращаемого объекта для безопасности
-      const { password, ...result } = user.toObject();
-      return result;
+  async registerTenantAccount(dto: any) {
+    const existingUser = await this.userModel
+      .findOne({ email: dto.email })
+      .exec();
+    if (existingUser) {
+      throw new BadRequestException(
+        'This email is already associated with an account.',
+      );
     }
-    return null;
+
+    // 🚀 Start a managed transaction database session
+    const session = await this.userModel.db.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Provision the business tenant space within the session context
+      const newTenant = new this.tenantModel({
+        name: dto.businessName,
+        slug: dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        chatConfig: {}, 
+      });
+      const savedTenant = await newTenant.save({ session });
+
+      // 2. Hash raw credential
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(dto.password, salt);
+
+      // 3. Create the administrator user bound tightly to the new tenantId
+      const newUser = new this.userModel({
+        name: dto.name,
+        email: dto.email,
+        passwordHash,
+        tenantId: savedTenant._id,
+        role: 'admin',
+      });
+      await newUser.save({ session });
+
+      // 🏁 Commit the transaction to disk if both writes succeed perfectly
+      await session.commitTransaction();
+      return { status: 'success', tenantId: savedTenant._id };
+    } catch (error) {
+      // 🛑 Abort transaction and clear out partial data if anything cracks mid-flight
+      await session.abortTransaction();
+      console.error(
+        '❌ Tenant registration rolled back due to error:',
+        error.message,
+      );
+      throw new BadRequestException(
+        'Workspace provisioning aborted due to an internal system fault.',
+      );
+    } finally {
+      // 🔒 Always clean up and close the database session lifecycle
+      await session.endSession();
+    }
   }
 
-  // 2. Вшивание ролей и тенанта в JWT-токен при успешном входе
-  async login(user: any) {
+  /**
+   * Validates credentials and signs a payload containing the secure tenant context anchor
+   */
+  async login(dto: any) {
+    const user = await this.userModel.findOne({ email: dto.email }).exec();
+    if (!user) throw new BadRequestException('Invalid credentials.');
+
+    const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!isMatch) throw new BadRequestException('Invalid credentials.');
+
     const payload = {
-      username: user.username,
       sub: user._id,
-      role: user.role, // Твои роли: SUPER_ADMIN, ADMIN, VIEWER
-      tenantId: user.tenantId || null, // Для тебя (SUPER_ADMIN) тут будет null
+      email: user.email,
+      tenantId: user.tenantId,
+      role: user.role,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
-      user: {
-        username: user.username,
-        role: user.role,
-        tenantId: user.tenantId,
-      },
     };
   }
 }

@@ -22,7 +22,7 @@ export default async function RootLayout({
         <Providers>
           <div className="flex min-h-screen">
             {/* Show Sidebar if session exists */}
-            {session && <Sidebar />}
+           <Sidebar />
 
             <main className="flex-1 h-screen overflow-y-auto">
               {session ? (
