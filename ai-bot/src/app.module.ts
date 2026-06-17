@@ -10,6 +10,7 @@ import { TenantModule } from './tenant/tenant.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionsModule } from './sessions/session.module';
+import { ChatsController } from './chats/chats.controller';
 @Module({
   imports: [
     AiAgentModule,
@@ -23,7 +24,10 @@ import { SessionsModule } from './sessions/session.module';
     UserModule,
     AuthModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, 
+
+    ChatsController
+  ],
   providers: [AppService],
 })
 export class AppModule {}

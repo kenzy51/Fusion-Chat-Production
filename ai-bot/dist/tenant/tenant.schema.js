@@ -13,50 +13,60 @@ exports.TenantSchema = exports.Tenant = exports.ChatConfig = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 let ChatConfig = class ChatConfig {
-    greeting;
-    chatPrompt;
     knowledgeBase;
-    keywords;
-    departments;
+    chatPrompt;
+    greeting;
+    primaryColor;
+    backgroundColor;
+    widgetTitle;
+    logoUrl;
 };
 exports.ChatConfig = ChatConfig;
-__decorate([
-    (0, mongoose_1.Prop)({ default: 'Hello, welcome to our website! How can we assist you today?' }),
-    __metadata("design:type", String)
-], ChatConfig.prototype, "greeting", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ default: 'You are a helpful automated assistant.' }),
-    __metadata("design:type", String)
-], ChatConfig.prototype, "chatPrompt", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ default: '' }),
     __metadata("design:type", String)
 ], ChatConfig.prototype, "knowledgeBase", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: [String], default: [] }),
-    __metadata("design:type", Array)
-], ChatConfig.prototype, "keywords", void 0);
+    (0, mongoose_1.Prop)({ default: '' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "chatPrompt", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, default: {} }),
-    __metadata("design:type", Object)
-], ChatConfig.prototype, "departments", void 0);
+    (0, mongoose_1.Prop)({ default: 'Hello! How can I assist you today?' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "greeting", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '#d4ff33' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "primaryColor", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '#000000' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "backgroundColor", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 'Fusion Bot' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "widgetTitle", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: '' }),
+    __metadata("design:type", String)
+], ChatConfig.prototype, "logoUrl", void 0);
 exports.ChatConfig = ChatConfig = __decorate([
-    (0, mongoose_1.Schema)({ _id: false })
+    (0, mongoose_1.Schema)()
 ], ChatConfig);
 let Tenant = class Tenant extends mongoose_2.Document {
-    slug;
     name;
+    slug;
     chatConfig;
 };
 exports.Tenant = Tenant;
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, unique: true, index: true }),
-    __metadata("design:type", String)
-], Tenant.prototype, "slug", void 0);
-__decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], Tenant.prototype, "name", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true, unique: true }),
+    __metadata("design:type", String)
+], Tenant.prototype, "slug", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: ChatConfig, default: () => ({}) }),
     __metadata("design:type", ChatConfig)

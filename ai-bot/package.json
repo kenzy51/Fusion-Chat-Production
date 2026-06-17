@@ -39,6 +39,7 @@
     "groq-sdk": "^0.37.0",
     "ioredis": "^5.11.1",
     "mongoose": "^9.2.1",
+    "next-headers": "^0.0.5",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",

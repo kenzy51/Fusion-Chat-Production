@@ -1,31 +1,38 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema({ _id: false })
+@Schema()
 export class ChatConfig {
-  @Prop({ default: 'Hello, welcome to our website! How can we assist you today?' }) 
-  greeting: string;
-
-  @Prop({ default: 'You are a helpful automated assistant.' }) 
-  chatPrompt: string;
-
-  @Prop({ default: '' }) 
+  @Prop({ default: '' })
   knowledgeBase: string;
 
-  @Prop({ type: [String], default: [] })
-  keywords: string[];
+  @Prop({ default: '' })
+  chatPrompt: string;
 
-  @Prop({ type: Object, default: {} })
-  departments: Record<string, string>;
+  @Prop({ default: 'Hello! How can I assist you today?' })
+  greeting: string;
+
+  // 🎨 NEW BRANDING ASSETS
+  @Prop({ default: '#d4ff33' }) // Fusion neon lime default primary accent
+  primaryColor: string;
+
+  @Prop({ default: '#000000' }) // Base window backdrop
+  backgroundColor: string;
+
+  @Prop({ default: 'Fusion Bot' }) // Title text on top of widget window
+  widgetTitle: string;
+
+  @Prop({ default: '' }) // Optional company custom logo URL string
+  logoUrl: string;
 }
 
 @Schema({ timestamps: true })
 export class Tenant extends Document {
-  @Prop({ required: true, unique: true, index: true })
-  slug: string; 
-
   @Prop({ required: true })
   name: string;
+
+  @Prop({ required: true, unique: true })
+  slug: string;
 
   @Prop({ type: ChatConfig, default: () => ({}) })
   chatConfig: ChatConfig;

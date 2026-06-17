@@ -1,14 +1,16 @@
 import { Document } from 'mongoose';
 export declare class ChatConfig {
-    greeting: string;
-    chatPrompt: string;
     knowledgeBase: string;
-    keywords: string[];
-    departments: Record<string, string>;
+    chatPrompt: string;
+    greeting: string;
+    primaryColor: string;
+    backgroundColor: string;
+    widgetTitle: string;
+    logoUrl: string;
 }
 export declare class Tenant extends Document {
-    slug: string;
     name: string;
+    slug: string;
     chatConfig: ChatConfig;
 }
 export declare const TenantSchema: import("mongoose").Schema<Tenant, import("mongoose").Model<Tenant, any, any, any, (Document<unknown, any, Tenant, any, import("mongoose").DefaultSchemaOptions> & Tenant & Required<{

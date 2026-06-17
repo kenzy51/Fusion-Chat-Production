@@ -6,7 +6,7 @@ import { MessageSquare, FileText, ChevronLeft, ChevronRight, Cpu, LogOut } from 
 
 const menuItems = [
   { name: "Dashboard", icon: FileText, href: "/" },
-  { name: "Chats", icon: MessageSquare, href: "/chats" },
+  // { name: "Chats", icon: MessageSquare, href: "/chats" },
   { name: "Bot Config", icon: Cpu, href: "/config" }, 
 ];
 
@@ -28,7 +28,7 @@ export function Sidebar() {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
-        const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:3003";
+        const BASE_URL = "http://localhost:3003";
         const res = await fetch(`${BASE_URL}/tenant/config`, {
           headers: { "Authorization": `Bearer ${token}` }
         });

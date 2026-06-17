@@ -12,13 +12,47 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TenantController = void 0;
+exports.TenantController = exports.PublicTenantController = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const user_schema_1 = require("../user/user.schema");
 const tenant_schema_1 = require("./tenant.schema");
+const common_2 = require("@nestjs/common");
+let PublicTenantController = class PublicTenantController {
+    tenantModel;
+    constructor(tenantModel) {
+        this.tenantModel = tenantModel;
+    }
+    async getPublicWidgetConfig(slug) {
+        const tenant = await this.tenantModel.findOne({ slug }).lean().exec();
+        if (!tenant) {
+            throw new common_2.NotFoundException('Target infrastructure context not located.');
+        }
+        return {
+            name: tenant.name,
+            slug: tenant.slug,
+            primaryColor: tenant.chatConfig?.primaryColor || '#d4ff33',
+            backgroundColor: tenant.chatConfig?.backgroundColor || '#000000',
+            widgetTitle: tenant.chatConfig?.widgetTitle || 'AI Assistant',
+            greeting: tenant.chatConfig?.greeting || 'Hello!',
+            logoUrl: tenant.chatConfig?.logoUrl || '',
+        };
+    }
+};
+exports.PublicTenantController = PublicTenantController;
+__decorate([
+    (0, common_1.Get)(':slug/widget-config'),
+    __param(0, (0, common_2.Param)('slug')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], PublicTenantController.prototype, "getPublicWidgetConfig", null);
+exports.PublicTenantController = PublicTenantController = __decorate([
+    (0, common_1.Controller)('public-tenant'),
+    __metadata("design:paramtypes", [mongoose_2.Model])
+], PublicTenantController);
 let TenantController = class TenantController {
     tenantModel;
     userModel;
@@ -33,7 +67,11 @@ let TenantController = class TenantController {
             this.userModel.findById(userId).lean().exec(),
         ]);
         if (!tenant || !user) {
-            return { name: 'Fusion Space', chatConfig: {}, user: { name: 'Admin Node', email: '' } };
+            return {
+                name: 'Fusion Space',
+                chatConfig: {},
+                user: { name: 'Admin Node', email: '' },
+            };
         }
         return {
             id: tenant._id,
@@ -43,7 +81,32 @@ let TenantController = class TenantController {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-            }
+            },
+        };
+    }
+    async updateConfig(req, body) {
+        const { tenantId } = req.user;
+        const { chatConfig } = body;
+        const updatedTenant = await this.tenantModel
+            .findByIdAndUpdate(tenantId, {
+            $set: {
+                'chatConfig.knowledgeBase': chatConfig.knowledgeBase,
+                'chatConfig.chatPrompt': chatConfig.chatPrompt,
+                'chatConfig.greeting': chatConfig.greeting,
+                'chatConfig.primaryColor': chatConfig.primaryColor,
+                'chatConfig.backgroundColor': chatConfig.backgroundColor,
+                'chatConfig.widgetTitle': chatConfig.widgetTitle,
+            },
+        }, { new: true })
+            .lean()
+            .exec();
+        if (!updatedTenant) {
+            throw new common_2.NotFoundException('Failed to update: Tenant structure not located.');
+        }
+        return {
+            success: true,
+            message: 'Neural brand metrics safely synchronized.',
+            chatConfig: updatedTenant.chatConfig,
         };
     }
 };
@@ -56,6 +119,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TenantController.prototype, "getCombinedProfile", null);
+__decorate([
+    (0, common_1.Patch)('update-config'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TenantController.prototype, "updateConfig", null);
 exports.TenantController = TenantController = __decorate([
     (0, common_1.Controller)('tenant'),
     __param(0, (0, mongoose_1.InjectModel)(tenant_schema_1.Tenant.name)),
