@@ -15,9 +15,13 @@ const mongoose_2 = require("mongoose");
 let User = class User extends mongoose_2.Document {
     name;
     email;
-    passwordHash;
+    password;
     tenantId;
     role;
+    isEmailVerified;
+    emailVerificationToken;
+    passwordResetToken;
+    passwordResetExpires;
 };
 exports.User = User;
 __decorate([
@@ -31,7 +35,7 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
-], User.prototype, "passwordHash", void 0);
+], User.prototype, "password", void 0);
 __decorate([
     (0, mongoose_1.Prop)({
         type: mongoose_2.Schema.Types.ObjectId,
@@ -45,6 +49,22 @@ __decorate([
     (0, mongoose_1.Prop)({ enum: ['admin', 'agent'], default: 'admin' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isEmailVerified", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", String)
+], User.prototype, "emailVerificationToken", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", String)
+], User.prototype, "passwordResetToken", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: false }),
+    __metadata("design:type", Date)
+], User.prototype, "passwordResetExpires", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

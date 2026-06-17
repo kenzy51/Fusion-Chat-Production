@@ -1,24 +1,28 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { AuthService } from './auth.service';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AuthController } from './auth.controller';
-import { UserModule } from '../user/user.module';
-import { TenantModule } from '../tenant/tenant.module';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import { AuthService } from './auth.service';
+import { EmailService } from './email.service'; // 🚀 1. IMPORT YOUR EMAIL SERVICE
+import { User, UserSchema } from 'src/user/user.schema';
+import { Tenant, TenantSchema } from 'src/tenant/tenant.schema';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    UserModule,
-    TenantModule, 
-    PassportModule,
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Tenant.name, schema: TenantSchema },
+    ]),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'KANAT_FUSION_AI', 
+      secret: process.env.JWT_SECRET || 'fallback_secret_key',
       signOptions: { expiresIn: '8h' },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule],
+  providers: [
+    AuthService, 
+    EmailService // 🎯 2. REGISTER IT AS A PROVIDER HERE
+  ],
+  exports: [AuthService],
 })
 export class AuthModule {}

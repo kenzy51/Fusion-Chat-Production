@@ -18,7 +18,7 @@ import { ChatsController } from './chats/chats.controller';
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGODB_URI!, {
       family: 4,
-      serverSelectionTimeoutMS: 5000, // Faster failure feedback
+      serverSelectionTimeoutMS: 5000, 
     }),
     TenantModule,
     UserModule,

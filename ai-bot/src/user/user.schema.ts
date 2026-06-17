@@ -9,8 +9,9 @@ export class User extends Document {
   @Prop({ required: true, unique: true, index: true })
   email: string;
 
+  // 🎯 FIXED: Changed from passwordHash to password to match your AuthController!
   @Prop({ required: true })
-  passwordHash: string; 
+  password: string;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
@@ -18,10 +19,22 @@ export class User extends Document {
     required: true,
     index: true,
   })
-  tenantId: string; 
+  tenantId: string;
 
   @Prop({ enum: ['admin', 'agent'], default: 'admin' })
   role: string;
+
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ required: false })
+  emailVerificationToken?: string;
+
+  @Prop({ required: false })
+  passwordResetToken?: string;
+
+  @Prop({ required: false })
+  passwordResetExpires?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

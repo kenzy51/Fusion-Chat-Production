@@ -5,7 +5,7 @@ import { User } from 'src/user/user.schema';
 import { Tenant } from 'src/tenant/tenant.schema';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-
+import * as crypto from 'crypto'; // 🚀 ДОБАВЬТЕ ЭТОТ ИМПОРТ
 @Injectable()
 export class AuthService {
   constructor(
@@ -13,6 +13,7 @@ export class AuthService {
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
     private readonly jwtService: JwtService,
   ) {}
+
   async registerTenantAccount(dto: any) {
     const existingUser = await this.userModel
       .findOne({ email: dto.email })
@@ -32,7 +33,7 @@ export class AuthService {
       const newTenant = new this.tenantModel({
         name: dto.businessName,
         slug: dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-        chatConfig: {}, 
+        chatConfig: {},
       });
       const savedTenant = await newTenant.save({ session });
 
@@ -44,9 +45,11 @@ export class AuthService {
       const newUser = new this.userModel({
         name: dto.name,
         email: dto.email,
-        passwordHash,
-        tenantId: savedTenant._id,
+        password: passwordHash, // 🎯 Matches the updated schema
+        tenantId: savedTenant._id, // 🚀 FIXED: Привязываем созданного пользователя к ID компании
         role: 'admin',
+        isEmailVerified: false, // Флаг верификации по умолчанию false
+        emailVerificationToken: crypto.randomBytes(32).toString('hex'),
       });
       await newUser.save({ session });
 
@@ -76,8 +79,16 @@ export class AuthService {
     const user = await this.userModel.findOne({ email: dto.email }).exec();
     if (!user) throw new BadRequestException('Invalid credentials.');
 
-    const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
+    // 🎯 FIXED: Изменено с user.passwordHash на user.password, чтобы соответствовать схеме
+    const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) throw new BadRequestException('Invalid credentials.');
+
+    // Дополнительная проверка на верификацию email (если внедрили эту логику)
+    if (user.isEmailVerified === false) {
+      throw new BadRequestException(
+        'Please verify your email before logging in.',
+      );
+    }
 
     const payload = {
       sub: user._id,

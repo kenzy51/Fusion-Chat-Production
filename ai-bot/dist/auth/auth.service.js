@@ -53,6 +53,7 @@ const user_schema_1 = require("../user/user.schema");
 const tenant_schema_1 = require("../tenant/tenant.schema");
 const bcrypt = __importStar(require("bcrypt"));
 const jwt_1 = require("@nestjs/jwt");
+const crypto = __importStar(require("crypto"));
 let AuthService = class AuthService {
     userModel;
     tenantModel;
@@ -83,9 +84,11 @@ let AuthService = class AuthService {
             const newUser = new this.userModel({
                 name: dto.name,
                 email: dto.email,
-                passwordHash,
+                password: passwordHash,
                 tenantId: savedTenant._id,
                 role: 'admin',
+                isEmailVerified: false,
+                emailVerificationToken: crypto.randomBytes(32).toString('hex'),
             });
             await newUser.save({ session });
             await session.commitTransaction();
@@ -104,9 +107,12 @@ let AuthService = class AuthService {
         const user = await this.userModel.findOne({ email: dto.email }).exec();
         if (!user)
             throw new common_1.BadRequestException('Invalid credentials.');
-        const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
+        const isMatch = await bcrypt.compare(dto.password, user.password);
         if (!isMatch)
             throw new common_1.BadRequestException('Invalid credentials.');
+        if (user.isEmailVerified === false) {
+            throw new common_1.BadRequestException('Please verify your email before logging in.');
+        }
         const payload = {
             sub: user._id,
             email: user.email,

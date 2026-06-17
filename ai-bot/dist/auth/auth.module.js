@@ -8,30 +8,34 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
-const jwt_1 = require("@nestjs/jwt");
-const passport_1 = require("@nestjs/passport");
-const auth_service_1 = require("./auth.service");
+const mongoose_1 = require("@nestjs/mongoose");
 const auth_controller_1 = require("./auth.controller");
-const user_module_1 = require("../user/user.module");
-const tenant_module_1 = require("../tenant/tenant.module");
-const jwt_strategy_1 = require("./strategies/jwt.strategy");
+const auth_service_1 = require("./auth.service");
+const email_service_1 = require("./email.service");
+const user_schema_1 = require("../user/user.schema");
+const tenant_schema_1 = require("../tenant/tenant.schema");
+const jwt_1 = require("@nestjs/jwt");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            user_module_1.UserModule,
-            tenant_module_1.TenantModule,
-            passport_1.PassportModule,
+            mongoose_1.MongooseModule.forFeature([
+                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
+                { name: tenant_schema_1.Tenant.name, schema: tenant_schema_1.TenantSchema },
+            ]),
             jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'KANAT_FUSION_AI',
+                secret: process.env.JWT_SECRET || 'fallback_secret_key',
                 signOptions: { expiresIn: '8h' },
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
-        exports: [auth_service_1.AuthService, jwt_1.JwtModule],
+        providers: [
+            auth_service_1.AuthService,
+            email_service_1.EmailService
+        ],
+        exports: [auth_service_1.AuthService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map
