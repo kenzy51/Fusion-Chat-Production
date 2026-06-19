@@ -12,9 +12,11 @@ const mongoose_1 = require("@nestjs/mongoose");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
 const email_service_1 = require("./email.service");
+const jwt_strategy_1 = require("./strategies/jwt.strategy");
 const user_schema_1 = require("../user/user.schema");
 const tenant_schema_1 = require("../tenant/tenant.schema");
 const jwt_1 = require("@nestjs/jwt");
+const passport_1 = require("@nestjs/passport");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -25,6 +27,7 @@ exports.AuthModule = AuthModule = __decorate([
                 { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
                 { name: tenant_schema_1.Tenant.name, schema: tenant_schema_1.TenantSchema },
             ]),
+            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'fallback_secret_key',
                 signOptions: { expiresIn: '8h' },
@@ -33,9 +36,10 @@ exports.AuthModule = AuthModule = __decorate([
         controllers: [auth_controller_1.AuthController],
         providers: [
             auth_service_1.AuthService,
-            email_service_1.EmailService
+            email_service_1.EmailService,
+            jwt_strategy_1.JwtStrategy
         ],
-        exports: [auth_service_1.AuthService],
+        exports: [auth_service_1.AuthService, passport_1.PassportModule, jwt_strategy_1.JwtStrategy],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

@@ -5,13 +5,16 @@ export declare class PublicTenantController {
     private readonly tenantModel;
     constructor(tenantModel: Model<Tenant>);
     getPublicWidgetConfig(slug: string): Promise<{
-        name: string;
-        slug: string;
-        primaryColor: string;
-        backgroundColor: string;
-        widgetTitle: string;
-        greeting: string;
-        logoUrl: string;
+        name: any;
+        slug: any;
+        primaryColor: any;
+        backgroundColor: any;
+        textColor: any;
+        widgetTitle: any;
+        greeting: any;
+        knowledgeBase: any;
+        chatPrompt: any;
+        logoUrl: any;
     }>;
 }
 export declare class TenantController {
@@ -19,18 +22,9 @@ export declare class TenantController {
     private readonly userModel;
     constructor(tenantModel: Model<Tenant>, userModel: Model<User>);
     getCombinedProfile(req: any): Promise<{
+        id: string | import("mongoose").Types.ObjectId;
         name: string;
         chatConfig: {};
-        user: {
-            name: string;
-            email: string;
-            role?: undefined;
-        };
-        id?: undefined;
-    } | {
-        id: import("mongoose").Types.ObjectId;
-        name: string;
-        chatConfig: import("src/tenant/tenant.schema").ChatConfig;
         user: {
             name: string;
             email: string;
@@ -40,6 +34,6 @@ export declare class TenantController {
     updateConfig(req: any, body: any): Promise<{
         success: boolean;
         message: string;
-        chatConfig: import("src/tenant/tenant.schema").ChatConfig;
+        chatConfig: any;
     }>;
 }

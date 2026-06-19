@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { Groq } from 'groq-sdk';
 
 const groq = new Groq();
@@ -13,7 +13,7 @@ export class ChatsController {
    */
   @Post('preview-message')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard) // 🔒 Protected via administration token guards
+  // @UseGuards(JwtAuthGuard) // 🔒 Protected via administration token guards
   async previewMessage(@Body() body: any) {
     const { message, chatPrompt, knowledgeBase } = body;
 

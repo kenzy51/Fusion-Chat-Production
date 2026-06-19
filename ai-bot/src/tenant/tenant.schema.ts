@@ -24,6 +24,7 @@ export class ChatConfig {
 
   @Prop({ default: '' }) // Optional company custom logo URL string
   logoUrl: string;
+  textColor: string;
 }
 
 @Schema({ timestamps: true })

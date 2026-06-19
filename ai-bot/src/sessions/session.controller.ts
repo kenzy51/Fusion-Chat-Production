@@ -13,7 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SessionsService } from './session.service'; // Ensure your callsService is renamed/updated to SessionsService
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('sessions')
 export class SessionsController {
@@ -25,7 +25,7 @@ export class SessionsController {
    * Crucial for the Next.js business dashboard.
    */
   @Get()
-  @UseGuards(JwtAuthGuard) 
+  // @UseGuards(JwtAuthGuard) 
   async getTenantSessions(@Query('tenantId') tenantId: string) {
     if (!tenantId) {
       throw new NotFoundException(

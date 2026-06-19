@@ -20,6 +20,7 @@ let ChatConfig = class ChatConfig {
     backgroundColor;
     widgetTitle;
     logoUrl;
+    textColor;
 };
 exports.ChatConfig = ChatConfig;
 __decorate([
