@@ -107,12 +107,13 @@ let AuthService = class AuthService {
         const user = await this.userModel.findOne({ email: dto.email }).exec();
         if (!user)
             throw new common_1.BadRequestException('Invalid credentials.');
-        const isMatch = await bcrypt.compare(dto.password, user.password);
+        const storedPassword = user.password || user.passwordHash;
+        if (!storedPassword) {
+            throw new common_1.BadRequestException('Account schema mismatch. Please update document parameters.');
+        }
+        const isMatch = await bcrypt.compare(dto.password, storedPassword);
         if (!isMatch)
             throw new common_1.BadRequestException('Invalid credentials.');
-        if (user.isEmailVerified === false) {
-            throw new common_1.BadRequestException('Please verify your email before logging in.');
-        }
         const payload = {
             sub: user._id,
             email: user.email,

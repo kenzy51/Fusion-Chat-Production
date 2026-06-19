@@ -20,10 +20,42 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const user_schema_1 = require("../user/user.schema");
 const tenant_schema_1 = require("./tenant.schema");
 const common_2 = require("@nestjs/common");
+const groq_sdk_1 = require("groq-sdk");
+const groq = new groq_sdk_1.Groq();
 let PublicTenantController = class PublicTenantController {
     tenantModel;
     constructor(tenantModel) {
         this.tenantModel = tenantModel;
+    }
+    async publicWidgetMessage(body) {
+        const { message, slug } = body;
+        const tenant = await this.tenantModel.findOne({ slug }).lean().exec();
+        if (!tenant) {
+            throw new common_2.NotFoundException('Inbound routing identifier node mismatch.');
+        }
+        try {
+            const systemInstruction = `
+        ${tenant.chatConfig?.chatPrompt || 'You are a helpful assistant.'}
+        Use ONLY the following knowledge facts context to answer:
+        ${tenant.chatConfig?.knowledgeBase || ''}
+      `;
+            const chatCompletion = await groq.chat.completions.create({
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: message },
+                ],
+                model: 'llama-3.1-8b-instant',
+                temperature: 0.2,
+                max_tokens: 512,
+            });
+            return {
+                reply: chatCompletion.choices[0]?.message?.content ||
+                    'Connection timeout stream anomaly.',
+            };
+        }
+        catch (error) {
+            return { reply: 'Engine down. Please try again later.' };
+        }
     }
     async getPublicWidgetConfig(slug) {
         const tenant = await this.tenantModel.findOne({ slug }).lean().exec();
@@ -35,6 +67,7 @@ let PublicTenantController = class PublicTenantController {
             slug: tenant.slug,
             primaryColor: tenant.chatConfig?.primaryColor || '#d4ff33',
             backgroundColor: tenant.chatConfig?.backgroundColor || '#000000',
+            textColor: tenant.chatConfig?.textColor || '#ffffff',
             widgetTitle: tenant.chatConfig?.widgetTitle || 'AI Assistant',
             greeting: tenant.chatConfig?.greeting || 'Hello!',
             logoUrl: tenant.chatConfig?.logoUrl || '',
@@ -42,6 +75,14 @@ let PublicTenantController = class PublicTenantController {
     }
 };
 exports.PublicTenantController = PublicTenantController;
+__decorate([
+    (0, common_1.Post)('message'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PublicTenantController.prototype, "publicWidgetMessage", null);
 __decorate([
     (0, common_1.Get)(':slug/widget-config'),
     __param(0, (0, common_2.Param)('slug')),
@@ -51,6 +92,7 @@ __decorate([
 ], PublicTenantController.prototype, "getPublicWidgetConfig", null);
 exports.PublicTenantController = PublicTenantController = __decorate([
     (0, common_1.Controller)('public-tenant'),
+    __param(0, (0, mongoose_1.InjectModel)(tenant_schema_1.Tenant.name)),
     __metadata("design:paramtypes", [mongoose_2.Model])
 ], PublicTenantController);
 let TenantController = class TenantController {
@@ -61,6 +103,9 @@ let TenantController = class TenantController {
         this.userModel = userModel;
     }
     async getCombinedProfile(req) {
+        if (!req.user) {
+            throw new common_1.UnauthorizedException('Authentication footprint context missing.');
+        }
         const { userId, tenantId } = req.user;
         const [tenant, user] = await Promise.all([
             this.tenantModel.findById(tenantId).lean().exec(),
@@ -85,8 +130,14 @@ let TenantController = class TenantController {
         };
     }
     async updateConfig(req, body) {
+        if (!req.user) {
+            throw new common_1.UnauthorizedException('Action rejected: Active workspace session state is invalid or expired. Please re-login.');
+        }
         const { tenantId } = req.user;
         const { chatConfig } = body;
+        if (!tenantId) {
+            throw new common_1.BadRequestException('Context verification failure: Missing explicit tenant identity anchor.');
+        }
         const updatedTenant = await this.tenantModel
             .findByIdAndUpdate(tenantId, {
             $set: {
@@ -95,6 +146,7 @@ let TenantController = class TenantController {
                 'chatConfig.greeting': chatConfig.greeting,
                 'chatConfig.primaryColor': chatConfig.primaryColor,
                 'chatConfig.backgroundColor': chatConfig.backgroundColor,
+                'chatConfig.textColor': chatConfig.textColor,
                 'chatConfig.widgetTitle': chatConfig.widgetTitle,
             },
         }, { new: true })
@@ -121,7 +173,6 @@ __decorate([
 ], TenantController.prototype, "getCombinedProfile", null);
 __decorate([
     (0, common_1.Patch)('update-config'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

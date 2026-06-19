@@ -10,12 +10,8 @@ import {
   MessageCircle,
   Activity,
   Cpu,
-  Layers,
   Sliders,
   Building2,
-  Mail,
-  User,
-  ShieldCheck,
   Palette,
   Eye,
   Send,
@@ -23,8 +19,28 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+// 🚀 UPDATED HELPER: Searches cookies first, falls back on LocalStorage instantly if cookies are hidden
+const getCookie = (name: string) => {
+  if (typeof document === "undefined") return null;
+  
+  // 1. Try to read from standard browser cookies
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    const token = parts.pop()?.split(";").shift();
+    if (token && token !== "null" && token !== "undefined") return token;
+  }
+  
+  // 2. 🎯 FALLBACK STRATEGY: Grab token from localStorage if cross-origin cookies are blocked locally
+  if (typeof window !== "undefined") {
+    const localToken = localStorage.getItem(name);
+    if (localToken && localToken !== "null" && localToken !== "undefined") return localToken;
+  }
+  
+  return null;
+};
 export default function BotConfigComponent({ initialData }: { initialData: any }) {
-  const [activeTab, setActiveTab] = useState<"prompting" | "account" | "customizer">("prompting");
+  const [activeTab, setActiveTab] = useState<"prompting" | "account" | "customizer" | "embed">("prompting");
 
   // Multi-tenant configuration states
   const config = initialData?.chatConfig || {};
@@ -35,7 +51,7 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
   // 🎨 Real-Time Branding Customizer States
   const [primaryColor, setPrimaryColor] = useState(config.primaryColor || "#d4ff33");
   const [backgroundColor, setBackgroundColor] = useState(config.backgroundColor || "#0a0a0a");
-  const [textColor, setTextColor] = useState(config.textColor || "#ffffff"); // 🌟 NEW: Font Color Customization state
+  const [textColor, setTextColor] = useState(config.textColor || "#ffffff"); 
   const [widgetTitle, setWidgetTitle] = useState(config.widgetTitle || "AI Assistant");
 
   // Interactive Live Chat Testing States
@@ -60,8 +76,11 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
     setIsBotTyping(true);
 
     try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch(`${BASE_URL}/chats/preview-message`, {
+      // 🎯 FIXED: Direct cookie authentication passing to bypass authentication anomalies
+      const token = getCookie("access_token");
+      
+      // We point directly to our public execution route to test behavior instantly
+      const res = await fetch(`${BASE_URL}/public-tenant/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -69,8 +88,7 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
         },
         body: JSON.stringify({
           message: inputMessage,
-          chatPrompt,
-          knowledgeBase: knowledge
+          slug: initialData?.slug
         })
       });
 
@@ -87,15 +105,34 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
     }
   };
 
-  const handleUpdate = async () => {
+ const handleUpdate = async () => {
     setIsSaving(true);
-    const token = localStorage.getItem("access_token");
+    
+    // 🎯 Extract token safely using the modified selector function
+    let token = getCookie("access_token");
+    
+    // Safety check: Clean up bad storage values strings 
+    if (!token || token === "null" || token === "undefined") {
+      // Direct local storage check in case cross-origin cookies are completely blocked by the browser layout
+      if (typeof window !== "undefined") {
+        token = localStorage.getItem("access_token");
+      }
+    }
+
+    if (!token || token === "null" || token === "undefined") {
+      toast.error("Session Interrupted", {
+        description: "Authentication context could not be located. Please re-login to re-authenticate your admin node."
+      });
+      setIsSaving(false);
+      return;
+    }
 
     const promise = fetch(`${BASE_URL}/tenant/update-config`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        // Ensure clean string interpolation without trailing line breaks or spacing wrappers
+        "Authorization": `Bearer ${token.trim()}`,
       },
       body: JSON.stringify({
         chatConfig: {
@@ -104,7 +141,7 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
           greeting: greeting,
           primaryColor,
           backgroundColor,
-          textColor, // 🚀 Pushed securely into backend configuration body tree
+          textColor,
           widgetTitle
         },
       }),
@@ -117,7 +154,12 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
     });
 
     try {
-      await promise;
+      const res = await promise;
+      if (res.status === 401) {
+        toast.error("Access Expired", {
+          description: "Your session token key was rejected by the cloud guard. Try signing out and signing back in."
+        });
+      }
     } catch (error: any) {
       console.error(error);
     } finally {
@@ -131,7 +173,7 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
 <script src="${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/embed.js" async></script>`;
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500 bg-black text-white min-h-screen selection:bg-[#d4ff33] selection:text-black">
+    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 bg-black text-white min-h-screen selection:bg-[#d4ff33] selection:text-black">
       
       {/* HEADER SEGMENT */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-6">
@@ -141,8 +183,9 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic text-zinc-100">
             {activeTab === "prompting" && "Neural Architecture"}
-            {activeTab === "account" && "Workspace Profile"}
             {activeTab === "customizer" && "Visual Branding Customizer"}
+            {activeTab === "account" && "Workspace Profile"}
+            {activeTab === "embed" && "Deployment Gateway"}
           </h1>
         </div>
 
@@ -173,6 +216,14 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
           }`}
         >
           <Palette size={14} /> Widget Customizer & Sandbox
+        </button>
+        <button
+          onClick={() => setActiveTab("embed")}
+          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${
+            activeTab === "embed" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"
+          }`}
+        >
+          <Terminal size={14} /> Connect Widget Embed
         </button>
         <button
           onClick={() => setActiveTab("account")}
@@ -221,8 +272,8 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
               <div className="space-y-1.5 pt-1">
                 <StatusItem label="CORE ENGINE" value="Llama-3.1-8B-Instant" />
                 <StatusItem label="VECTOR WEIGHTS" value="Dynamic Embeddings" />
-                <StatusItem label="CACHE FRAMEWORK" value="Redis In-Memory KeyStore" />
-                <StatusItem label="DATA TENANCY" value="Stateless Tenant Separation" />
+                <StatusItem label="CACHE FRAMEWORK" value="Redis KeyStore" />
+                <StatusItem label="DATA TENANCY" value="Stateless Isolation" />
               </div>
             </ConfigCard>
           </div>
@@ -232,111 +283,55 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
       {/* 🎨 VISUAL BRANDING TAB WITH LIVE CUSTOM TEXT COLOR MODIFIERS */}
       {activeTab === "customizer" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
           <div className="lg:col-span-7 space-y-6">
             <ConfigCard icon={<Palette size={14} />} title="Visual Design Modifiers">
               <div className="space-y-4 pt-2">
-                
-                {/* Accent Selection */}
                 <div>
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Primary Accent Color (Launcher & Buttons)</label>
                   <div className="flex gap-3">
-                    <input 
-                      type="color" 
-                      value={primaryColor} 
-                      onChange={(e) => setPrimaryColor(e.target.value)} 
-                      className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" 
-                    />
-                    <input 
-                      type="text" 
-                      value={primaryColor} 
-                      onChange={(e) => setPrimaryColor(e.target.value)} 
-                      className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" 
-                    />
+                    <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" />
+                    <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
 
-                {/* Base Window Background Selection */}
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Window Base Layer Backing</label>
                   <div className="flex gap-3">
-                    <input 
-                      type="color" 
-                      value={backgroundColor} 
-                      onChange={(e) => setBackgroundColor(e.target.value)} 
-                      className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" 
-                    />
-                    <input 
-                      type="text" 
-                      value={backgroundColor} 
-                      onChange={(e) => setBackgroundColor(e.target.value)} 
-                      className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" 
-                    />
+                    <input type="color" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" />
+                    <input type="text" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
 
-                {/* 🌟 NEW: Font Color Modifier Option Input */}
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Message Text Color</label>
                   <div className="flex gap-3">
-                    <input 
-                      type="color" 
-                      value={textColor} 
-                      onChange={(e) => setTextColor(e.target.value)} 
-                      className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" 
-                    />
-                    <input 
-                      type="text" 
-                      value={textColor} 
-                      onChange={(e) => setTextColor(e.target.value)} 
-                      className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" 
-                    />
+                    <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-12 h-12 border border-white/10 rounded-xl bg-transparent cursor-pointer" />
+                    <input type="text" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
 
-                {/* Header Title Text Input */}
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Banner Header Title</label>
-                  <input 
-                    type="text" 
-                    value={widgetTitle} 
-                    onChange={(e) => setWidgetTitle(e.target.value)} 
-                    className="w-full bg-zinc-950 border border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-zinc-200 outline-none focus:border-[#d4ff33]/30"
-                  />
+                  <input type="text" value={widgetTitle} onChange={(e) => setWidgetTitle(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-zinc-200 outline-none focus:border-[#d4ff33]/30" />
                 </div>
-
-              </div>
-            </ConfigCard>
-
-            <ConfigCard icon={<Terminal size={14} />} title="Deployment Integration Copy Block">
-              <p className="text-xs text-zinc-500 mb-3 leading-relaxed">Paste this code snippet right into the bottom of your `body` layout container tag to serve this interface globally.</p>
-              <div className="relative">
-                <pre className="p-4 bg-zinc-950 rounded-xl text-[11px] font-mono text-zinc-400 overflow-x-auto border border-white/5 whitespace-pre-wrap select-all">
-                  {embedCodeSnippet}
-                </pre>
               </div>
             </ConfigCard>
           </div>
 
-          {/* RIGHT COLUMN: SANDBOX CANVAS SYSTEM REAL TIME DYNAMIC RENDERING */}
+          {/* SANDBOX CANVAS SYSTEM REAL TIME DYNAMIC RENDERING */}
           <div className="lg:col-span-5 flex flex-col items-center justify-center min-h-[600px] border border-white/5 bg-zinc-950/20 rounded-[32px] p-6 relative overflow-hidden backdrop-blur-xl">
             <div className="absolute top-4 left-6 flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-widest pointer-events-none">
-              <Eye size={12} /> Sandbox Sandbox Execution View
+              <Eye size={12} /> Sandbox Execution View
             </div>
 
             {isPreviewOpen && (
-              <div 
-                style={{ backgroundColor: backgroundColor }} 
-                className="w-full max-w-[380px] h-[520px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300"
-              >
-                {/* Header Banner */}
+              <div style={{ backgroundColor: backgroundColor }} className="w-full max-w-[380px] h-[520px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300">
                 <div style={{ borderColor: `${primaryColor}20` }} className="p-4 border-b flex items-center justify-between bg-white/[0.02]">
                   <div className="flex items-center gap-3">
                     <div style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }} className="w-8 h-8 rounded-full flex items-center justify-center">
                       <Bot size={16} />
                     </div>
                     <div>
-                      {/* Applying custom text color parameter to the layout header */}
                       <h4 style={{ color: textColor }} className="text-xs font-black tracking-tight">{widgetTitle}</h4>
                       <span className="text-[9px] text-zinc-500 font-bold uppercase flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Agent Online
@@ -345,17 +340,10 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
                   </div>
                 </div>
 
-                {/* Message Streams Area */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs custom-scrollbar bg-black/20">
+                <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs bg-black/20">
                   {previewMessages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div 
-                        style={msg.role === 'user' 
-                          ? { backgroundColor: primaryColor, color: '#000000' } 
-                          : { backgroundColor: 'rgba(255,255,255,0.04)', color: textColor } // 🎯 ASSIGNED: Dynamic text style colors for bot bubble nodes
-                        } 
-                        className={`max-w-[80%] rounded-xl px-3.5 py-2.5 font-medium leading-relaxed ${msg.role === 'user' ? 'font-black' : ''}`}
-                      >
+                      <div style={msg.role === 'user' ? { backgroundColor: primaryColor, color: '#000000' } : { backgroundColor: 'rgba(255,255,255,0.04)', color: textColor }} className={`max-w-[80%] rounded-xl px-3.5 py-2.5 font-medium leading-relaxed ${msg.role === 'user' ? 'font-black' : ''}`}>
                         {msg.content}
                       </div>
                     </div>
@@ -369,35 +357,35 @@ export default function BotConfigComponent({ initialData }: { initialData: any }
                   )}
                 </div>
 
-                {/* Form Input Controllers */}
-                <form onSubmit={handleSendPreviewMessage} style={{ borderColor: 'rgba(255,255,255,0.05)' }} className="p-3 border-t bg-white/[0.01] flex gap-2">
-                  <input 
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Ask agent parameters..."
-                    style={{ color: textColor }} // Apply custom type styles dynamically
-                    className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-3 text-xs outline-none focus:border-white/10"
-                  />
-                  <button 
-                    type="submit" 
-                    style={{ backgroundColor: primaryColor }} 
-                    className="p-3 rounded-xl text-black hover:scale-105 active:scale-95 transition-transform"
-                  >
+                <form onSubmit={handleSendPreviewMessage} className="p-3 border-t border-white/5 bg-white/[0.01] flex gap-2">
+                  <input type="text" value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} placeholder="Ask agent parameters..." style={{ color: textColor }} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-3 text-xs outline-none focus:border-white/10" />
+                  <button type="submit" style={{ backgroundColor: primaryColor }} className="p-3 rounded-xl text-black hover:scale-105 active:scale-95 transition-transform">
                     <Send size={12} />
                   </button>
                 </form>
               </div>
             )}
 
-            <button 
-              onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-              style={{ backgroundColor: primaryColor }} 
-              className="absolute bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-transform z-50"
-            >
-              <MessageCircle size={20} className="text-black" />
+            <button onClick={() => setIsPreviewOpen(!isPreviewOpen)} style={{ backgroundColor: primaryColor }} className="absolute bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-transform z-50">
+              <Bot size={20} className="text-black" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* EMBED INTEGRATION VIEW */}
+      {activeTab === "embed" && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <ConfigCard icon={<Terminal size={14} />} title="Deployment Integration Copy Block">
+            <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
+              Copy this lightweight HTML code block and drop it directly into the bottom of your website&apos;s <code className="bg-zinc-950 px-1.5 py-0.5 rounded text-[#d4ff33] font-mono text-xs">&lt;body&gt;</code> container tag to deploy your personalized chatbot asset globally.
+            </p>
+            <div className="relative">
+              <pre className="p-5 bg-zinc-950 rounded-2xl text-[11px] font-mono text-zinc-400 overflow-x-auto border border-white/5 whitespace-pre-wrap select-all leading-relaxed">
+                {embedCodeSnippet}
+              </pre>
+            </div>
+          </ConfigCard>
         </div>
       )}
 

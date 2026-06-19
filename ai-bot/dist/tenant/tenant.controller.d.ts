@@ -4,11 +4,18 @@ import { Tenant } from 'src/tenant/tenant.schema';
 export declare class PublicTenantController {
     private readonly tenantModel;
     constructor(tenantModel: Model<Tenant>);
+    publicWidgetMessage(body: {
+        message: string;
+        slug: string;
+    }): Promise<{
+        reply: string;
+    }>;
     getPublicWidgetConfig(slug: string): Promise<{
         name: string;
         slug: string;
         primaryColor: string;
         backgroundColor: string;
+        textColor: string;
         widgetTitle: string;
         greeting: string;
         logoUrl: string;

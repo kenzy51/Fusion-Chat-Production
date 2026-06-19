@@ -7,6 +7,7 @@ export declare class ChatConfig {
     backgroundColor: string;
     widgetTitle: string;
     logoUrl: string;
+    textColor: string;
 }
 export declare class Tenant extends Document {
     name: string;
