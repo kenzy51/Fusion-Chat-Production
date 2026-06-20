@@ -16,52 +16,49 @@ import {
   Eye,
   Send,
   Bot,
+  Mail,
+  User,
+  ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
 
-// 🚀 ROBUST COOKIE EXTRACTOR: Grabs token from cookies, falls back to localStorage if cross-origin rules hide it
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
-
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) {
     const token = parts.pop()?.split(";").shift();
     if (token && token !== "null" && token !== "undefined") return token;
   }
-
   if (typeof window !== "undefined") {
     const localToken = localStorage.getItem(name);
     if (localToken && localToken !== "null" && localToken !== "undefined")
       return localToken;
   }
-
   return null;
 };
 
-export default function BotConfigComponent({
-  initialData,
-}: {
-  initialData: any;
-}) {
-  const [activeTab, setActiveTab] = useState<
-    "prompting" | "account" | "customizer"
-  >("prompting");
+export default function BotConfigComponent() {
+  const [activeTab, setActiveTab] = useState<"prompting" | "account" | "customizer">("prompting");
 
-  // Multi-tenant baseline states
-  const [tenantName, setTenantName] = useState(initialData?.name || "Fusion Space");
-  const [tenantSlug, setTenantSlug] = useState(initialData?.slug || "");
+  // Dynamic Workspace Identifiers
+  const [tenantName, setTenantName] = useState("");
+  const [tenantSlug, setTenantSlug] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Configuration Parameter Fields
-  const config = initialData?.chatConfig || {};
-  const [knowledge, setKnowledge] = useState(config.knowledgeBase || "");
-  const [chatPrompt, setChatPrompt] = useState(config.chatPrompt || "");
-  const [greeting, setGreeting] = useState(config.greeting || "");
+  // 🎯 NEW: Admin Personal Metadata State Fields
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminRole, setAdminRole] = useState("");
 
-  const [primaryColor, setPrimaryColor] = useState(config.primaryColor || "#d4ff33");
-  const [backgroundColor, setBackgroundColor] = useState(config.backgroundColor || "#0a0a0a");
-  const [textColor, setTextColor] = useState(config.textColor || "#ffffff");
-  const [widgetTitle, setWidgetTitle] = useState(config.widgetTitle || "AI Assistant");
+  // Customizer Input States
+  const [knowledge, setKnowledge] = useState("");
+  const [chatPrompt, setChatPrompt] = useState("");
+  const [greeting, setGreeting] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#d4ff33");
+  const [backgroundColor, setBackgroundColor] = useState("#0a0a0a");
+  const [textColor, setTextColor] = useState("#ffffff");
+  const [widgetTitle, setWidgetTitle] = useState("AI Assistant");
 
   const [previewMessages, setPreviewMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -71,87 +68,55 @@ export default function BotConfigComponent({
 
   const BASE_URL = "http://localhost:3003";
 
-  // 🎯 UN-GUARDED FETCH INFRASTRUCTURE: Runs on frame mounting to pull saved data parameters straight out of MongoDB
-  useEffect(() => {
-    const fetchActiveTenantData = async () => {
-      let activeSlug = initialData?.slug;
-      if (!activeSlug && typeof window !== "undefined") {
-        const pathParts = window.location.pathname.split("/");
-        activeSlug = pathParts[2] 
-      }
-      
-      setTenantSlug(activeSlug);
-
+useEffect(() => {
+    const hydrateDynamicWorkspace = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/public-tenant/${activeSlug}/widget-config`);
-        if (res.ok) {
-          const remoteData = await res.json();
+        const token = getCookie("access_token");
+        
+        const profileRes = await fetch(`${BASE_URL}/tenant/config`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
           
-          setTenantName(remoteData.name || "Fusion Space");
-          setWidgetTitle(remoteData.widgetTitle || "AI Assistant");
-          setGreeting(remoteData.greeting || "Hello!");
-          setPrimaryColor(remoteData.primaryColor || "#d4ff33");
-          setBackgroundColor(remoteData.backgroundColor || "#0a0a0a");
-          setTextColor(remoteData.textColor || "#ffffff");
+          // 🚀 RESILIENT EXTRACTORS: Checks all possible structural variants
+          const extractedSlug = profileData.slug || profileData.chatConfig?.slug || "test"; 
+          setTenantSlug(extractedSlug);
+          setTenantName(profileData.name || "Fusion Space");
           
-          // Re-fetch the private knowledge and prompt fields directly if they are stored or bundled in public view
-          if (remoteData.knowledgeBase) setKnowledge(remoteData.knowledgeBase);
-          if (remoteData.chatPrompt) setChatPrompt(remoteData.chatPrompt);
-          
-          setPreviewMessages([
-            { role: "assistant", content: remoteData.greeting || "Hello! Drop a message to test my live configurations." }
-          ]);
+          // Hydrate User Profile Fields safely
+          setAdminName(profileData.user?.name || profileData.name || "Admin Node");
+          setAdminEmail(profileData.user?.email || "test@gmail.com");
+          setAdminRole(profileData.user?.role || "admin");
+
+          // Fetch widget layout configs matching this workspace
+          const configRes = await fetch(`${BASE_URL}/public-tenant/${extractedSlug}/widget-config`);
+          if (configRes.ok) {
+            const remoteData = await configRes.json();
+            
+            setWidgetTitle(remoteData.widgetTitle || "AI Assistant");
+            setGreeting(remoteData.greeting || "Hello!");
+            setPrimaryColor(remoteData.primaryColor || "#d4ff33");
+            setBackgroundColor(remoteData.backgroundColor || "#0a0a0a");
+            setTextColor(remoteData.textColor || "#ffffff");
+            setKnowledge(remoteData.knowledgeBase || "");
+            setChatPrompt(remoteData.chatPrompt || "");
+            
+            setPreviewMessages([
+              { role: "assistant", content: remoteData.greeting || "Hello! Drop a message to test my live configurations." }
+            ]);
+          }
         }
       } catch (err) {
-        console.error("⚠️ Local infrastructure lookup missed, fallback engaged.", err);
+        console.error("⚠️ Workspace synchronization pipeline error.", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchActiveTenantData();
-  }, [initialData, BASE_URL]);
-
-  const handleSendPreviewMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputMessage.trim()) return;
-
-    const userMsg = { role: "user", content: inputMessage };
-    setPreviewMessages((prev) => [...prev, userMsg]);
-    setInputMessage("");
-    setIsBotTyping(true);
-
-    try {
-      const res = await fetch(`${BASE_URL}/public-tenant/message`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: inputMessage,
-          slug: tenantSlug || "workspace",
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setPreviewMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.reply },
-        ]);
-      } else {
-        setPreviewMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Error communicating with local neural model node." },
-        ]);
-      }
-    } catch (err) {
-      setPreviewMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Pipeline failure connection broken." },
-      ]);
-    } finally {
-      setIsBotTyping(false);
-    }
-  };
+    hydrateDynamicWorkspace();
+  }, [BASE_URL]);
 
   const handleUpdate = async () => {
     setIsSaving(true);
@@ -164,7 +129,6 @@ export default function BotConfigComponent({
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        slug: tenantSlug, 
         chatConfig: {
           knowledgeBase: knowledge,
           chatPrompt: chatPrompt,
@@ -178,24 +142,59 @@ export default function BotConfigComponent({
     });
 
     toast.promise(promise, {
-      loading: "Synchronizing global branding parameters...",
-      success: "Neural brand architecture updated successfully.",
-      error: "Transmission framework error.",
+      loading: "Synchronizing workspace metrics...",
+      success: "Workspace architecture successfully updated.",
+      error: "Transmission framework structure error.",
     });
 
     try {
       await promise;
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleSendPreviewMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+
+    const userMsg = { role: "user", content: inputMessage };
+    setPreviewMessages((prev) => [...prev, userMsg]);
+    setInputMessage("");
+    setIsBotTyping(true);
+
+    try {
+      const res = await fetch(`${BASE_URL}/public-tenant/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: inputMessage, slug: tenantSlug }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPreviewMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsBotTyping(false);
+    }
+  };
+
   const embedCodeSnippet = `<script>
-  window.FusionAIChatConfig = { tenantSlug: "${tenantSlug || "workspace"}" };
+  window.FusionAIChatConfig = { tenantSlug: "${tenantSlug}" };
 </script>
-<script src="${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/embed.js" async></script>`;
+<script src="http://localhost:3000/embed.js" async></script>`;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-black text-[#d4ff33] font-mono text-xs tracking-widest animate-pulse">
+        COMPILING MULTI-TENANT CONFIG SLOTS VIA ENCRYPTED ACCESS TOKEN LAYER...
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 bg-black text-white min-h-screen selection:bg-[#d4ff33] selection:text-black">
@@ -203,7 +202,7 @@ export default function BotConfigComponent({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-6">
         <div>
           <div className="flex items-center gap-2 text-[#d4ff33] text-[10px] font-black uppercase tracking-[0.3em] mb-1">
-            <Cpu size={12} className="animate-pulse" /> infrastructure parameter node
+            <Cpu size={12} className="animate-pulse" /> workspace node: {tenantSlug}
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic text-zinc-100">
             {activeTab === "prompting" && "Neural Architecture"}
@@ -224,30 +223,9 @@ export default function BotConfigComponent({
 
       {/* NAVIGATION TABS CONTROL */}
       <div className="flex flex-wrap gap-2 border-b border-white/5 pb-4">
-        <button
-          onClick={() => setActiveTab("prompting")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${
-            activeTab === "prompting" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"
-          }`}
-        >
-          <Sliders size={14} /> Neural Prompting Engine
-        </button>
-        <button
-          onClick={() => setActiveTab("customizer")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${
-            activeTab === "customizer" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"
-          }`}
-        >
-          <Palette size={14} /> Widget Customizer & Sandbox
-        </button>
-        <button
-          onClick={() => setActiveTab("account")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${
-            activeTab === "account" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"
-          }`}
-        >
-          <Building2 size={14} /> Workspace Account Data
-        </button>
+        <button onClick={() => setActiveTab("prompting")} className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "prompting" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}><Sliders size={14} /> Neural Prompting Engine</button>
+        <button onClick={() => setActiveTab("customizer")} className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "customizer" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}><Palette size={14} /> Widget Customizer & Sandbox</button>
+        <button onClick={() => setActiveTab("account")} className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "account" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}><Building2 size={14} /> Workspace Account Data</button>
       </div>
 
       {/* PROMPTING VIEW CONTAINER */}
@@ -255,40 +233,22 @@ export default function BotConfigComponent({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-8">
             <ConfigCard icon={<Database size={14} />} title="System Knowledge Memory Array">
-              <textarea
-                className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y"
-                value={knowledge}
-                onChange={(e) => setKnowledge(e.target.value)}
-                placeholder="Inject clean text documentation vectors here..."
-              />
+              <textarea className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y" value={knowledge} onChange={(e) => setKnowledge(e.target.value)} placeholder="Inject clean text documentation vectors here..." />
             </ConfigCard>
-
             <ConfigCard icon={<MessageCircle size={14} />} title="Core Persona Logic Constraints">
-              <textarea
-                className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y"
-                value={chatPrompt}
-                onChange={(e) => setChatPrompt(e.target.value)}
-                placeholder="Designate behavioral instructions and strict constraints..."
-              />
+              <textarea className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y" value={chatPrompt} onChange={(e) => setChatPrompt(e.target.value)} placeholder="Designate behavioral instructions and strict constraints..." />
             </ConfigCard>
           </div>
-
           <div className="lg:col-span-4 space-y-8">
             <ConfigCard icon={<MessageSquareQuote size={14} />} title="Initial Welcome Trigger Message">
-              <textarea
-                value={greeting}
-                onChange={(e) => setGreeting(e.target.value)}
-                className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-28 resize-none"
-                placeholder="Automated chat welcome script block..."
-              />
+              <textarea value={greeting} onChange={(e) => setGreeting(e.target.value)} className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-28 resize-none" placeholder="Automated chat welcome script block..." />
             </ConfigCard>
-
             <ConfigCard icon={<Activity size={14} />} title="Node Cluster Architecture Runtime">
               <div className="space-y-1.5 pt-1">
                 <StatusItem label="CORE ENGINE" value="Llama-3.1-8B-Instant" />
                 <StatusItem label="VECTOR WEIGHTS" value="Dynamic Grow Embeddings" />
                 <StatusItem label="CACHE FRAMEWORK" value="Redis In-Memory KeyStore" />
-                <StatusItem label="DATA TENANCY" value="Stateless Tenant Separation" />
+                <StatusItem label="DATA TENANCY" value="Dynamic Isolated Tenant Separation" />
               </div>
             </ConfigCard>
           </div>
@@ -308,7 +268,6 @@ export default function BotConfigComponent({
                     <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
-
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Window Base Layer Backing</label>
                   <div className="flex gap-3">
@@ -316,7 +275,6 @@ export default function BotConfigComponent({
                     <input type="text" value={backgroundColor} onChange={(e) => setBackgroundColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
-
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Message Text Color</label>
                   <div className="flex gap-3">
@@ -324,25 +282,19 @@ export default function BotConfigComponent({
                     <input type="text" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 text-xs font-mono text-zinc-200 uppercase outline-none focus:border-[#d4ff33]/30" />
                   </div>
                 </div>
-
                 <div className="pt-2">
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Widget Banner Header Title</label>
                   <input type="text" value={widgetTitle} onChange={(e) => setWidgetTitle(e.target.value)} className="w-full bg-zinc-950 border border-white/5 rounded-xl py-3.5 px-4 text-xs font-bold text-zinc-200 outline-none focus:border-[#d4ff33]/30" />
                 </div>
               </div>
             </ConfigCard>
-
             <ConfigCard icon={<Terminal size={14} />} title="Deployment Integration Copy Block">
-              <p className="text-xs text-zinc-500 mb-3 leading-relaxed">Paste this code snippet right into the bottom of your `body` layout container tag to serve this interface globally.</p>
-              <div className="relative">
-                <pre className="p-4 bg-zinc-950 rounded-xl text-[11px] font-mono text-zinc-400 overflow-x-auto border border-white/5 whitespace-pre-wrap select-all">
-                  {embedCodeSnippet}
-                </pre>
-              </div>
+              <p className="text-xs text-zinc-500 mb-3 leading-relaxed">Paste this code snippet right into the bottom of your website `body` to deploy this chatbot globally.</p>
+              <pre className="p-4 bg-zinc-950 rounded-xl text-[11px] font-mono text-zinc-400 overflow-x-auto border border-white/5 whitespace-pre-wrap select-all">{embedCodeSnippet}</pre>
             </ConfigCard>
           </div>
 
-          {/* SANDBOX EXECUTOR VIEW */}
+          {/* SANDBOX CANVAS VIEW */}
           <div className="lg:col-span-5 flex flex-col items-center justify-center min-h-[600px] border border-white/5 bg-zinc-950/20 rounded-[32px] p-6 relative overflow-hidden backdrop-blur-xl">
             <div className="absolute top-4 left-6 flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-widest pointer-events-none"><Eye size={12} /> Sandbox Execution View</div>
             {isPreviewOpen && (
@@ -356,18 +308,14 @@ export default function BotConfigComponent({
                     </div>
                   </div>
                 </div>
-
                 <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs bg-black/20">
                   {previewMessages.map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div style={msg.role === "user" ? { backgroundColor: primaryColor, color: "#000000" } : { backgroundColor: "rgba(255,255,255,0.04)", color: textColor }} className="max-w-[80%] rounded-xl px-3.5 py-2.5 font-medium leading-relaxed">
-                        {msg.content}
-                      </div>
+                      <div style={msg.role === "user" ? { backgroundColor: primaryColor, color: "#000000" } : { backgroundColor: "rgba(255,255,255,0.04)", color: textColor }} className="max-w-[80%] rounded-xl px-3.5 py-2.5 font-medium leading-relaxed">{msg.content}</div>
                     </div>
                   ))}
                   {isBotTyping && <div className="flex justify-start"><div style={{ color: textColor }} className="bg-white/[0.04] rounded-xl px-4 py-3 font-mono text-[10px] tracking-widest opacity-40 animate-pulse">PROCESSING MATRIX...</div></div>}
                 </div>
-
                 <form onSubmit={handleSendPreviewMessage} className="p-3 border-t border-white/5 bg-white/[0.01] flex gap-2">
                   <input type="text" value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} placeholder="Ask agent parameters..." style={{ color: textColor }} className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-3 text-xs outline-none focus:border-white/10" />
                   <button type="submit" style={{ backgroundColor: primaryColor }} className="p-3 rounded-xl text-black hover:scale-105 active:scale-95 transition-transform"><Send size={12} /></button>
@@ -379,13 +327,19 @@ export default function BotConfigComponent({
         </div>
       )}
 
-      {/* ACCOUNT WRAPPER VIEW */}
+      {/* 👤 ACCOUNT WRAPPER VIEW */}
       {activeTab === "account" && (
-        <div className="max-w-3xl mx-auto space-y-6">
-          <ConfigCard icon={<Building2 size={14} />} title="Tenant Registry Overview">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <ConfigCard icon={<Building2 size={14} />} title="Dynamic Workspace Data Registry Summary">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              <AccountField icon={<Building2 size={16} />} label="Registered Company Name" value={tenantName} />
+              {/* Company & Workspace Slugs */}
+              <AccountField icon={<Building2 size={16} />} label="Registered Workspace Company Name" value={tenantName} />
               <AccountField icon={<Terminal size={16} />} label="Isolation Domain Slug Identifier" value={`/${tenantSlug || "unknown"}`} />
+              
+              {/* 🚀 ADMIN USER METADATA FIELDS */}
+              <AccountField icon={<User size={16} />} label="Active Administrator Name" value={adminName} />
+              <AccountField icon={<Mail size={16} />} label="Corporate Administrative Account Gmail" value={adminEmail} />
+              <AccountField icon={<ShieldAlert size={16} />} label="Infrastructural Node Authority Role" value={adminRole.toUpperCase()} />
             </div>
           </ConfigCard>
         </div>

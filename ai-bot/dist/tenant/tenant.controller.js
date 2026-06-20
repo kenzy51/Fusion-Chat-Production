@@ -16,27 +16,24 @@ exports.TenantController = exports.PublicTenantController = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-const user_schema_1 = require("../user/user.schema");
 const tenant_schema_1 = require("./tenant.schema");
-const common_2 = require("@nestjs/common");
+const user_schema_1 = require("../user/user.schema");
+const jwt_1 = require("@nestjs/jwt");
 let PublicTenantController = class PublicTenantController {
     tenantModel;
     constructor(tenantModel) {
         this.tenantModel = tenantModel;
     }
     async getPublicWidgetConfig(slug) {
-        let tenant = null;
-        if (slug && slug !== 'workspace' && slug !== 'undefined') {
-            tenant = await this.tenantModel
-                .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
-                .lean()
-                .exec();
+        if (!slug || slug === 'undefined' || slug === 'workspace') {
+            throw new common_1.BadRequestException('Workspace tracking parameters invalid.');
         }
+        const tenant = await this.tenantModel
+            .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
+            .lean()
+            .exec();
         if (!tenant) {
-            tenant = await this.tenantModel.findOne({}).sort({ createdAt: -1 }).lean().exec();
-        }
-        if (!tenant) {
-            throw new common_1.NotFoundException('Configuration sync error: No tenant entries exist in the MongoDB collection yet.');
+            throw new common_1.NotFoundException('Requested chat layer context not located.');
         }
         return {
             name: tenant.name,
@@ -48,14 +45,13 @@ let PublicTenantController = class PublicTenantController {
             greeting: tenant.chatConfig?.greeting || 'Hello!',
             knowledgeBase: tenant.chatConfig?.knowledgeBase || '',
             chatPrompt: tenant.chatConfig?.chatPrompt || '',
-            logoUrl: tenant.chatConfig?.logoUrl || '',
         };
     }
 };
 exports.PublicTenantController = PublicTenantController;
 __decorate([
     (0, common_1.Get)(':slug/widget-config'),
-    __param(0, (0, common_2.Param)('slug')),
+    __param(0, (0, common_1.Param)('slug')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
@@ -68,63 +64,75 @@ exports.PublicTenantController = PublicTenantController = __decorate([
 let TenantController = class TenantController {
     tenantModel;
     userModel;
-    constructor(tenantModel, userModel) {
+    jwtService;
+    constructor(tenantModel, userModel, jwtService) {
         this.tenantModel = tenantModel;
         this.userModel = userModel;
+        this.jwtService = jwtService;
     }
-    async getCombinedProfile(req) {
-        const tenant = await this.tenantModel.findOne({}).sort({ createdAt: -1 }).lean().exec();
+    decodeHeaderToken(authHeader) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new common_1.BadRequestException('Administrative active session missing.');
+        }
+        const token = authHeader.split(' ')[1];
+        const decoded = this.jwtService.decode(token);
+        if (!decoded || !decoded.tenantId || !decoded.sub) {
+            throw new common_1.BadRequestException('Security credential token token fingerprint corrupt.');
+        }
+        return decoded;
+    }
+    async getCombinedProfile(authHeader) {
+        const decoded = this.decodeHeaderToken(authHeader);
+        const [tenant, user] = await Promise.all([
+            this.tenantModel.findById(decoded.tenantId).lean().exec(),
+            this.userModel.findById(decoded.sub).lean().exec(),
+        ]);
+        if (!tenant) {
+            const fallbackTenant = await this.tenantModel.findOne({}).lean().exec();
+            return {
+                id: fallbackTenant?._id || 'mock_tenant_id',
+                name: fallbackTenant?.name || 'Fusion Space (Failsafe)',
+                slug: fallbackTenant?.slug || 'test',
+                chatConfig: fallbackTenant?.chatConfig || {},
+                user: {
+                    name: user?.name || 'Test User (No DB Match)',
+                    email: user?.email || 'test@gmail.com',
+                    role: user?.role || 'admin',
+                }
+            };
+        }
         return {
-            id: tenant?._id || 'mock_id',
-            name: tenant?.name || 'Fusion Space',
-            chatConfig: tenant?.chatConfig || {},
-            user: { name: 'Admin Node', email: 'admin@fusion.ai', role: 'admin' },
+            id: tenant._id,
+            name: tenant.name,
+            slug: tenant.slug,
+            chatConfig: tenant.chatConfig || {},
+            user: {
+                name: user?.name || 'Admin Node',
+                email: user?.email || decoded.email || 'unknown@gmail.com',
+                role: user?.role || decoded.role || 'admin',
+            },
         };
     }
-    async updateConfig(req, body) {
-        const { chatConfig, slug } = body;
-        let updatedTenant = null;
-        if (slug && slug !== 'workspace' && slug !== 'undefined') {
-            updatedTenant = await this.tenantModel
-                .findOneAndUpdate({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } }, {
-                $set: {
-                    'chatConfig.knowledgeBase': chatConfig.knowledgeBase,
-                    'chatConfig.chatPrompt': chatConfig.chatPrompt,
-                    'chatConfig.greeting': chatConfig.greeting,
-                    'chatConfig.primaryColor': chatConfig.primaryColor,
-                    'chatConfig.backgroundColor': chatConfig.backgroundColor,
-                    'chatConfig.textColor': chatConfig.textColor,
-                    'chatConfig.widgetTitle': chatConfig.widgetTitle,
-                },
-            }, { new: true })
-                .lean()
-                .exec();
-        }
-        if (!updatedTenant) {
-            const activeDocument = await this.tenantModel.findOne({}).sort({ createdAt: -1 }).exec();
-            if (activeDocument) {
-                updatedTenant = await this.tenantModel
-                    .findByIdAndUpdate(activeDocument._id, {
-                    $set: {
-                        'chatConfig.knowledgeBase': chatConfig.knowledgeBase,
-                        'chatConfig.chatPrompt': chatConfig.chatPrompt,
-                        'chatConfig.greeting': chatConfig.greeting,
-                        'chatConfig.primaryColor': chatConfig.primaryColor,
-                        'chatConfig.backgroundColor': chatConfig.backgroundColor,
-                        'chatConfig.textColor': chatConfig.textColor,
-                        'chatConfig.widgetTitle': chatConfig.widgetTitle,
-                    },
-                }, { new: true })
-                    .lean()
-                    .exec();
-            }
-        }
-        if (!updatedTenant) {
-            throw new common_1.NotFoundException('Failed to execute update: Target document cannot be located inside collections.');
-        }
+    async updateConfig(authHeader, body) {
+        const decoded = this.decodeHeaderToken(authHeader);
+        const { chatConfig } = body;
+        const updatedTenant = await this.tenantModel
+            .findByIdAndUpdate(decoded.tenantId, {
+            $set: {
+                'chatConfig.knowledgeBase': chatConfig.knowledgeBase,
+                'chatConfig.chatPrompt': chatConfig.chatPrompt,
+                'chatConfig.greeting': chatConfig.greeting,
+                'chatConfig.primaryColor': chatConfig.primaryColor,
+                'chatConfig.backgroundColor': chatConfig.backgroundColor,
+                'chatConfig.textColor': chatConfig.textColor,
+                'chatConfig.widgetTitle': chatConfig.widgetTitle,
+            },
+        }, { new: true })
+            .lean()
+            .exec();
         return {
             success: true,
-            message: 'Neural brand metrics safely synchronized to current active workspace document.',
+            message: 'Workspace branding parameters successfully synchronized.',
             chatConfig: updatedTenant.chatConfig,
         };
     }
@@ -132,17 +140,17 @@ let TenantController = class TenantController {
 exports.TenantController = TenantController;
 __decorate([
     (0, common_1.Get)('config'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, common_1.Headers)('authorization')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], TenantController.prototype, "getCombinedProfile", null);
 __decorate([
     (0, common_1.Patch)('update-config'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, common_1.Headers)('authorization')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], TenantController.prototype, "updateConfig", null);
 exports.TenantController = TenantController = __decorate([
@@ -150,6 +158,7 @@ exports.TenantController = TenantController = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(tenant_schema_1.Tenant.name)),
     __param(1, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        jwt_1.JwtService])
 ], TenantController);
 //# sourceMappingURL=tenant.controller.js.map
