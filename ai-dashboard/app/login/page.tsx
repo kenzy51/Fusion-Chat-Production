@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft, KeyRound, Mail } from "lucide-react";
+export const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL;
 
 function LoginContent() {
   const router = useRouter();
@@ -11,7 +12,7 @@ function LoginContent() {
 
   // Режимы экрана: 'login' (вход) или 'forgot' (восстановление)
   const [mode, setMode] = useState<"login" | "forgot">("login");
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -20,7 +21,8 @@ function LoginContent() {
   useEffect(() => {
     if (searchParams.get("registered") === "true") {
       toast.success("Workspace Provisioned!", {
-        description: "Your infrastructure is ready. Log in to access your dashboard.",
+        description:
+          "Your infrastructure is ready. Log in to access your dashboard.",
       });
     }
   }, [searchParams]);
@@ -30,7 +32,6 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      const BASE_URL = "http://localhost:3003";
       const res = await fetch(`${BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -42,9 +43,11 @@ function LoginContent() {
 
       // Сохраняем JWT токен в куки
       document.cookie = `access_token=${data.access_token}; path=/; max-age=28800; SameSite=Strict; Secure`;
-      
-      toast.success("Access Granted", { description: "Decrypting dashboard architecture..." });
-      router.push("/config"); 
+
+      toast.success("Access Granted", {
+        description: "Decrypting dashboard architecture...",
+      });
+      router.push("/config");
       router.refresh();
     } catch (err: any) {
       toast.error("Access Denied", { description: err.message });
@@ -58,7 +61,6 @@ function LoginContent() {
     setLoading(true);
 
     try {
-      const BASE_URL = "http://localhost:3003";
       const res = await fetch(`${BASE_URL}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,10 +68,12 @@ function LoginContent() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to process recovery request.");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to process recovery request.");
 
       toast.success("Recovery Link Transmitted", {
-        description: "Check your secure mailbox container for the reset access key.",
+        description:
+          "Check your secure mailbox container for the reset access key.",
       });
       setMode("login");
     } catch (err: any) {
@@ -82,7 +86,6 @@ function LoginContent() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-black selection:bg-[#d4ff33] selection:text-black p-4">
       <div className="w-full max-w-md p-8 md:p-12 bg-zinc-900/40 border border-white/10 rounded-[40px] backdrop-blur-xl shadow-2xl space-y-6 transition-all duration-500">
-        
         {/* Шапка формы в зависимости от режима */}
         <div className="flex flex-col gap-1 text-center mb-2">
           <span className="text-[#d4ff33] text-[10px] font-bold uppercase tracking-[0.2em]">
@@ -97,7 +100,9 @@ function LoginContent() {
           /* ЭКРАН ВХОДА */
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Corporate Email</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                Corporate Email
+              </label>
               <input
                 type="email"
                 placeholder="alex@company.com"
@@ -110,7 +115,9 @@ function LoginContent() {
 
             <div>
               <div className="flex justify-between items-center mb-2">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">Password</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Password
+                </label>
                 <button
                   type="button"
                   onClick={() => setMode("forgot")}
@@ -150,10 +157,13 @@ function LoginContent() {
           /* ЭКРАН ВОССТАНОВЛЕНИЯ ПАРОЛЯ */
           <form onSubmit={handleForgotPassword} className="space-y-5">
             <p className="text-xs text-zinc-500 leading-relaxed text-center">
-              Enter your registered corporate email node. We will transmit an encrypted pipeline link to override your access credential layers.
+              Enter your registered corporate email node. We will transmit an
+              encrypted pipeline link to override your access credential layers.
             </p>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">Corporate Email</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                Corporate Email
+              </label>
               <input
                 type="email"
                 placeholder="alex@company.com"
@@ -201,7 +211,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-zinc-500 font-mono text-xs">INITIALIZING INTERACTION MATRIX...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-black flex items-center justify-center text-zinc-500 font-mono text-xs">
+          INITIALIZING INTERACTION MATRIX...
+        </div>
+      }
+    >
       <LoginContent />
     </Suspense>
   );

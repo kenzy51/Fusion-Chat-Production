@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { MessageSquare, FileText, ChevronLeft, ChevronRight, Cpu, LogOut } from "lucide-react";
+import { BASE_URL } from "@/app/login/page";
 
 const menuItems = [
   { name: "Dashboard", icon: FileText, href: "/" },
@@ -15,7 +16,6 @@ export function Sidebar() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // 🏢 Unified profile state schema matching backend output tree
   const [profile, setProfile] = useState({
     businessName: "Loading...",
     adminName: "Admin Node",
@@ -28,7 +28,6 @@ export function Sidebar() {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
-        const BASE_URL = "http://localhost:3003";
         const res = await fetch(`${BASE_URL}/tenant/config`, {
           headers: { "Authorization": `Bearer ${token}` }
         });

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ShieldCheck, Clock, Mail } from "lucide-react";
+import { BASE_URL } from "../login/page";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,7 +20,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
 
-    const BASE_URL = "http://localhost:3003";
 
     try {
       // 1. Send registration payload parameters to the backend cluster

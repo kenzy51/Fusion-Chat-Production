@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { cookies } from "next/headers";
 import BotConfigComponent from "./BotConfigComponent";
+import { BASE_URL } from "../login/page";
 
 export default async function Page() {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
 
   let tenantData = null;
-  const BASE_URL = "http://localhost:3003";
 
   if (token) {
     try {

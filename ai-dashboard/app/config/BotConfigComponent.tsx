@@ -21,6 +21,7 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
+import { BASE_URL } from "../login/page";
 
 const getCookie = (name: string) => {
   if (typeof document === "undefined") return null;
@@ -66,7 +67,6 @@ export default function BotConfigComponent() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const BASE_URL = "http://localhost:3003";
 
 useEffect(() => {
     const hydrateDynamicWorkspace = async () => {
