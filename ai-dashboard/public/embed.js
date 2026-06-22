@@ -1,18 +1,23 @@
 (function () {
   const config = window.FusionAIChatConfig;
   if (!config || !config.tenantSlug) {
-    console.error("Fusion AI Error: Missing tenantSlug parameter configuration metric.");
+    console.error(
+      "Fusion AI Error: Missing tenantSlug parameter configuration metric.",
+    );
     return;
   }
 
   // 1. Target your backend setup variables
-  const BACKEND_URL = "http://localhost:3003";
-  const FRONTEND_WIDGET_URL = "http://localhost:3000/widget"; // Your chat container view route
+  const BACKEND_URL = "https://your-nest-backend-app.onrender.com";
+  const currentOrigin = typeof document !== "undefined" && document.currentScript 
+    ? new URL(document.currentScript.src).origin 
+    : "https://fusion-chat-production.vercel.app";
 
+  const FRONTEND_WIDGET_URL = `${currentOrigin}/widget`;
   // 2. Fetch the target styling matrices from your public endpoint
   fetch(`${BACKEND_URL}/public-tenant/${config.tenantSlug}/widget-config`)
-    .then(res => res.json())
-    .then(data => {
+    .then((res) => res.json())
+    .then((data) => {
       // 3. Programmatically generate a floating launcher action button
       const bubble = document.createElement("div");
       bubble.style.position = "fixed";
@@ -53,5 +58,7 @@
       document.body.appendChild(bubble);
       document.body.appendChild(frameContainer);
     })
-    .catch(err => console.error("Failed loading autonomous voice agent node:", err));
+    .catch((err) =>
+      console.error("Failed loading autonomous voice agent node:", err),
+    );
 })();

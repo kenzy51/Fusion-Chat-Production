@@ -182,11 +182,12 @@ useEffect(() => {
       setIsBotTyping(false);
     }
   };
+const currentOrigin = typeof window !== "undefined" ? window.location.origin : "https://fusion-chat-production.vercel.app";
 
   const embedCodeSnippet = `<script>
   window.FusionAIChatConfig = { tenantSlug: "${tenantSlug}" };
 </script>
-<script src="http://localhost:3000/embed.js" async></script>`;
+<script src="${currentOrigin}/embed.js" async></script>`;
 
   if (isLoading) {
     return (
