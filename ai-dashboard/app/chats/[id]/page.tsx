@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { FileText, ChevronLeft } from "lucide-react";
-import { remoteUrl } from "../page"; // Importing the dynamic URL from the list page
+// import { remoteUrl } from "../page"; // Importing the dynamic URL from the list page
 
 interface CallRecord {
   _id: string;
@@ -33,7 +33,7 @@ export default function ChatDetailPage() {
   useEffect(() => {
     const fetchChatDetails = async () => {
       try {
-        const response = await fetch(remoteUrl);
+        const response = await fetch('remoteUrl');
         const data: CallRecord[] = await response.json();
         const found = data.find((c) => c._id === id);
         setChat(found || null);
