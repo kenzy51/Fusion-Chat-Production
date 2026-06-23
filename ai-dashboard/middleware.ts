@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   // 🔑 1. Check for your authentication token cookie
   // Adjust 'access_token' to match whatever cookie name you save your JWT under during login
-  const token = request.cookies.get('access_token')?.value;
+  const token = request.cookies.get("access_token")?.value;
 
   const { pathname } = request.nextUrl;
 
   // 🛡️ 2. If no token exists, redirect them straight to the login screen
   if (!token) {
     // We construct an absolute URL using the incoming request origin (e.g., http://localhost:3000)
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -30,6 +30,6 @@ export const config = {
      * - login page
      * - register page
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|login|register).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|login|register|embed.js).*)",
   ],
 };
