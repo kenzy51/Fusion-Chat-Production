@@ -8,7 +8,7 @@ import { TenantModule } from 'src/tenant/tenant.module'; // 🚀 1. IMPORT TENAN
 @Module({
   imports: [
     forwardRef(() => SessionsModule),
-    TenantModule, 
+    forwardRef(() => TenantModule), // 🛡️ Wrap with forwardRef to prevent circular bootstrap lockups!
   ],
   providers: [ChatService, ChatGateway, ConfigStore],
   exports: [ChatService, ConfigStore],
