@@ -6,12 +6,10 @@ import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
 import { ChatSession } from 'src/sessions/schemas/session.schema';
 import { SessionsService } from 'src/sessions/session.service';
-import Redis from 'ioredis';
 
 @Injectable()
 export class ChatService implements OnModuleInit {
   private groq: Groq;
-  private redis: Redis;
 
   constructor(
     private readonly sessionsService: SessionsService,
@@ -21,17 +19,15 @@ export class ChatService implements OnModuleInit {
   ) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
     this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-    // 🚀 REDIS: Establish connection for extreme margin control caching
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+    // 🧼 Redis variable initialization removed completely
   }
 
   async onModuleInit() {
-    console.log('🚀 Fusion Chat Engine Activated. Stateless Tenancy Engaged.');
+    console.log('🚀 Fusion Chat Engine Activated. Database Tenancy Bound.');
   }
 
   /**
-   * Generates a fully dynamic text response checking cache first to protect MongoDB IOPS bounds.
+   * Generates a fully dynamic text response checking MongoDB directly.
    */
   async generateTextOnlyResponse(
     userText: string,
@@ -41,42 +37,23 @@ export class ChatService implements OnModuleInit {
     const leanHistory = passedHistory.slice(-10);
 
     try {
-      // 🔍 SYSTEMS DESIGN PATTERN: Cache-Aside Layer
-      const cacheKey = `tenant:${businessId}:config`;
-      let tenantConfigString = await this.redis.get(cacheKey);
-      let currentTenant: any;
+      // 🎯 FIXED: Direct secure lookup inside your MongoDB collections
+      const currentTenant = await this.tenantModel
+        .findOne({
+          $or: [{ _id: businessId }, { slug: businessId }],
+        })
+        .exec();
 
-      if (tenantConfigString) {
-        currentTenant = JSON.parse(tenantConfigString);
-      } else {
-        // Cache miss -> Hit MongoDB securely
-        currentTenant = await this.tenantModel
-          .findOne({
-            $or: [{ _id: businessId }, { slug: businessId }],
-          })
-          .exec();
-
-        if (!currentTenant) {
-          return 'System error: Tenant configuration node not found.';
-        }
-
-        // Cache config for 5 minutes (300s) to limit database overhead
-        await this.redis.set(
-          cacheKey,
-          JSON.stringify(currentTenant),
-          'EX',
-          300,
-        );
+      if (!currentTenant) {
+        return 'System error: Tenant configuration node not found.';
       }
 
       const dynamicKnowledge =
         currentTenant.chatConfig?.knowledgeBase ||
-        currentTenant.voiceConfig?.knowledgeBase ||
         '';
 
       const dynamicSystemChatPrompt =
         currentTenant.chatConfig?.chatPrompt ||
-        currentTenant.voiceConfig?.chatPrompt ||
         'You are a helpful assistant.';
 
       // Get precision completion from Groq
@@ -104,17 +81,10 @@ export class ChatService implements OnModuleInit {
   }
 
   async getTenantConfig(tenantId: string): Promise<any> {
-    const cacheKey = `tenant:${tenantId}:config`;
-    const cached = await this.redis.get(cacheKey);
-
-    if (cached) return JSON.parse(cached);
-
-    const tenant = await this.tenantModel.findById(tenantId).exec();
-    if (tenant) {
-      await this.redis.set(cacheKey, JSON.stringify(tenant), 'EX', 300);
-    }
-    return tenant;
+    // 🎯 FIXED: Direct MongoDB query tracking helper without cache lookups
+    return await this.tenantModel.findById(tenantId).exec();
   }
+
   /**
    * Logs conversational analytics asynchronously back to MongoDB when a session completes
    */
@@ -132,8 +102,7 @@ export class ChatService implements OnModuleInit {
           messages: [
             {
               role: 'system',
-              content:
-                'Summarize this conversation context in one brief sentence.',
+              content: 'Summarize this conversation context in one brief sentence.',
             },
             {
               role: 'user',
@@ -146,16 +115,14 @@ export class ChatService implements OnModuleInit {
 
       await this.sessionsService.saveSession({
         tenantId,
-        sessionId: conversationId, // repurpose session tracking ID
+        sessionId: conversationId,
         endUserIp: 'Web Chat End User',
         summary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
         status: 'completed',
       });
 
-      console.log(
-        `✅ Multi-Tenant Chat Session saved securely for tenant: ${tenantId}`,
-      );
+      console.log(`✅ Multi-Tenant Chat Session saved securely for tenant: ${tenantId}`);
     } catch (e) {
       console.error('❌ Async Chat Session Save failed:', e.message);
     }
