@@ -19,7 +19,11 @@ async function bootstrap() {
 
   // 🚀 THE CRITICAL CORS FIX: Allow your Next.js frontend to talk to your API
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // 🎯 Your frontend URL
+    origin: [
+      'http://localhost:3000', // Local Next.js development server
+      'https://fusion-chat-production.vercel.app', 
+      process.env.FRONTEND_URL, 
+    ].filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true, // Allow passing cookies or authorization headers
     allowedHeaders: 'Content-Type, Accept, Authorization',

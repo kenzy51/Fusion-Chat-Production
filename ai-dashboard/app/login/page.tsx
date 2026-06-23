@@ -4,8 +4,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft, KeyRound, Mail } from "lucide-react";
-export const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL;
-
+export const BASE_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://your-nest-backend-app.onrender.com" // Live production Render API link (uses HTTPS)
+    : "http://localhost:3003";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
