@@ -50,7 +50,7 @@ export class PublicTenantController {
   }
 }
 
-@Controller('tenant') // 🔒 ADMINISTRATIVE ACTION HUB
+@Controller('tenant') 
 export class TenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,

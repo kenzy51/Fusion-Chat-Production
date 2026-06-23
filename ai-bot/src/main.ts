@@ -22,6 +22,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000', // Local Next.js development server
       'https://fusion-chat-production.vercel.app', 
+      'https://ai-soul-spa-1.vercel.app' ,// 🎯 MUST whitelist your client's domain!
       process.env.FRONTEND_URL, 
     ].filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

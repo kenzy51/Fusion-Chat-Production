@@ -1,20 +1,19 @@
 (function () {
   const config = window.FusionAIChatConfig;
   if (!config || !config.tenantSlug) {
-    console.error(
-      "Fusion AI Error: Missing tenantSlug parameter configuration metric.",
-    );
+    console.error("Fusion AI Error: Missing tenantSlug parameter configuration metric.");
     return;
   }
 
-  // 1. Target your backend setup variables
-  const BACKEND_URL = "https://your-nest-backend-app.onrender.com";
+  // 🎯 FIXED: Direct your script to hit your real live Render server!
+  const BACKEND_URL = "https://fusion-chat-production.onrender.com";
+  
   const currentOrigin = typeof document !== "undefined" && document.currentScript 
     ? new URL(document.currentScript.src).origin 
     : "https://fusion-chat-production.vercel.app";
 
   const FRONTEND_WIDGET_URL = `${currentOrigin}/widget`;
-  // 2. Fetch the target styling matrices from your public endpoint
+
   fetch(`${BACKEND_URL}/public-tenant/${config.tenantSlug}/widget-config`)
     .then((res) => res.json())
     .then((data) => {
@@ -26,7 +25,7 @@
       bubble.style.width = "60px";
       bubble.style.height = "60px";
       bubble.style.borderRadius = "50%";
-      bubble.style.backgroundColor = data.primaryColor;
+      bubble.style.backgroundColor = data.primaryColor || "#d4ff33"; // Safe fallback
       bubble.style.cursor = "pointer";
       bubble.style.zIndex = "999999";
       bubble.style.boxShadow = "0 4px 16px rgba(0,0,0,0.2)";
@@ -37,7 +36,7 @@
 
       // 4. Programmatically generate the hidden chat window layout iframe wrapper
       const frameContainer = document.createElement("iframe");
-      frameContainer.src = `${FRONTEND_WIDGET_URL}?slug=${data.slug}`;
+      frameContainer.src = `${FRONTEND_WIDGET_URL}?slug=${data.slug || config.tenantSlug}`;
       frameContainer.style.position = "fixed";
       frameContainer.style.bottom = "96px";
       frameContainer.style.right = "24px";
@@ -59,6 +58,6 @@
       document.body.appendChild(frameContainer);
     })
     .catch((err) =>
-      console.error("Failed loading autonomous voice agent node:", err),
+      console.error("Failed loading autonomous voice agent node:", err)
     );
 })();
