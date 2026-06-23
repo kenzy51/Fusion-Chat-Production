@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff, ArrowLeft, KeyRound, Mail } from "lucide-react";
 export const BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://fusion-chat-production.onrender.com/" // Live production Render API link (uses HTTPS)
+    ? "https://fusion-chat-production.onrender.com" // Live production Render API link (uses HTTPS)
     : "http://localhost:3003";
 function LoginContent() {
   const router = useRouter();
