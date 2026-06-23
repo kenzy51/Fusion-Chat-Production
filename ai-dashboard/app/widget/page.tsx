@@ -1,24 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react"; // 🚀 Added Suspense
 import { useSearchParams } from "next/navigation";
 import { Bot, Send } from "lucide-react";
 
+// 1. 🛡️ The Main Export Wrapped with a Suspense Container Layer
 export default function StandalonePublicWidgetPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="w-screen h-screen bg-[#0a0a0a] text-zinc-500 font-mono text-[10px] tracking-widest flex items-center justify-center animate-pulse">
+          INITIALIZING SECURE ENVIRONMENT...
+        </div>
+      }
+    >
+      <WidgetContent />
+    </Suspense>
+  );
+}
+
+// 2. 🧠 Move your entire actual logic engine right down here
+function WidgetContent() {
   const searchParams = useSearchParams();
   const slug = searchParams.get("slug");
 
-  // Backend target origin configuration link matching your active environment
   const BASE_URL = "https://fusion-chat-production.onrender.com";
 
-  // Configuration settings sync layouts state
   const [config, setConfig] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isBotTyping, setIsBotTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch dynamic client branding matrices straight from your public endpoints
   useEffect(() => {
     if (!slug) return;
 
@@ -36,7 +49,6 @@ export default function StandalonePublicWidgetPage() {
       .catch((err) => console.error("Widget layout configuration failure:", err));
   }, [slug]);
 
-  // Autoscroll anchor triggers
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isBotTyping]);
