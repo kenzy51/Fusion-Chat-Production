@@ -5,16 +5,18 @@ import { TenantController, PublicTenantController } from './tenant.controller';
 import { Tenant, TenantSchema } from './tenant.schema';
 import { UserModule } from '../user/user.module'; 
 import { AuthModule } from 'src/auth/auth.module';
-import { ChatService } from 'src/ai-agent/gemini/chat.service';
+// 🎯 IMPORT THE PARENT MODULE INSTEAD OF JUST THE SERVICE
+import { AiAgentModule } from 'src/ai-agent/ai-agent.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Tenant.name, schema: TenantSchema }]),
     UserModule,
     AuthModule, 
+    AiAgentModule, // 🚀 This gives TenantModule clean access to the fully operational ChatService!
   ],
-  providers: [TenantService,ChatService],
+  providers: [TenantService], // 🧼 Clean out ChatService from here
   controllers: [TenantController, PublicTenantController], 
-  exports: [MongooseModule,ChatService],
+  exports: [MongooseModule, TenantService],
 })
 export class TenantModule {}
