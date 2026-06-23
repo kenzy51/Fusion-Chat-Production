@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Partner with Fusion AI | Market Exclusivity",
     description: "Ready to automate? Request a strategy call for our Neural Voice and Growth Engine solutions.",
-    url: "https://www.fusionaiagency.com/contact",
+    url: "https://www.getfusionchat.com/contact",
   },
 };
 

@@ -7,11 +7,21 @@ import { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Neural Systems Insights",
-  description: "Deep dives into AI voice agents, automation, and the future of dental practice tech.",
+  metadataBase: new URL("https://www.getfusionchat.com"),
+  title: "Conversational Intelligence Insights & Engineering Briefings",
+  description:
+    "Deep dives into highly scalable AI chat widgets, automated lead qualification, and conversion optimization pipelines for high-ticket businesses.",
+  keywords: [
+    "Fusion Chat AI Blog",
+    "AI Conversion Engineering",
+    "Autonomous Lead Qualification Tech",
+    "SaaS Scaling Architecture",
+    "High-Ticket Client Acquisition Framework"
+  ],
   openGraph: {
-    title: "Neural Systems Insights | Fusion AI Blog",
-    description: "Expert insights on scaling clinics and businesses with high-performance AI.",
+    title: "Conversational Intelligence Insights | Fusion Chat Blog",
+    description: "Expert tactical deep dives on scaling conversion loops and retention with lightweight AI chat tech.",
+    url: "https://www.getfusionchat.com/blog",
   }
 };
 
@@ -33,11 +43,11 @@ export default async function BlogIndex() {
             Intelligence Archive
           </span>
           <h1 className="text-5xl md:text-8xl font-bold text-white mb-8 tracking-tighter leading-none">
-            Neural Systems <br />
-            <span className="text-zinc-600">Insights</span>
+            Conversational <br />
+            <span className="text-zinc-600">Intelligence</span>
           </h1>
           <p className="text-zinc-400 text-lg md:text-xl max-w-xl font-light leading-relaxed">
-            Technical briefings on the integration of autonomous voice agents and neural infrastructure within high-growth clinical environments.
+            Technical briefings on the deployment of light, low-latency text agents and autonomous scheduling loops within high-growth B2B workflows.
           </p>
         </div>
 
@@ -61,7 +71,7 @@ export default async function BlogIndex() {
                   />
                 ) : (
                   <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
-                    <span className="text-zinc-800 font-mono text-xs italic">No Signal // Fusion AI</span>
+                    <span className="text-zinc-800 font-mono text-xs italic">No Signal // Fusion Chat</span>
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/20 to-transparent opacity-80" />
@@ -74,7 +84,7 @@ export default async function BlogIndex() {
                   </span>
                   <div className="h-px w-4 bg-zinc-800" />
                   <time className="text-zinc-600 font-mono text-[10px]">
-                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '05.2026'}
+                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '06.2026'}
                   </time>
                 </div>
 
@@ -85,7 +95,7 @@ export default async function BlogIndex() {
                 </h2>
 
                 <p className="text-zinc-500 text-sm md:text-base leading-relaxed line-clamp-2 font-light mb-8">
-                  {post.description || "Access the full technical documentation on this neural deployment."}
+                  {post.description || "Access the full technical documentation on this conversation conversion system."}
                 </p>
 
                 <div className="mt-auto flex items-center gap-2 text-white font-mono text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
@@ -95,11 +105,12 @@ export default async function BlogIndex() {
             </Link>
           ))}
         </div>
+
         <div className="mt-32 text-center border-t border-white/5 pt-20">
           <h3 className="text-white text-2xl font-bold mb-4 tracking-tighter">Stay Synchronized.</h3>
-          <p className="text-zinc-500 text-sm mb-8">New intelligence reports are broadcasted bi-weekly.</p>
+          <p className="text-zinc-500 text-sm mb-8">New optimization strategies are broadcasted bi-weekly.</p>
           <Link href="/contact" className="text-[#d4ff33] font-mono text-xs uppercase tracking-widest hover:text-white transition-colors">
-            Connect for Deployment →
+            Connect for Integration →
           </Link>
         </div>
       </div>

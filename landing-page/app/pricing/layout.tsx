@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Pricing | Fusion AI Agency",
     description: "Scale your practice with precision. Essential neural automation and full-stack growth engines for NYC practices.",
-    url: "https://www.fusionaiagency.com/pricing",
+    url: "https://www.getfusionchat.com/pricing",
   },
 };
 

@@ -30,8 +30,8 @@ export async function generateMetadata(
   if (!post) return { title: "Instance Not Found" };
 
   return {
-    title: `${post.title} | Fusion AI Intelligence`,
-    description: post.description || `Systems breakdown: ${post.title} by Fusion AI.`,
+    title: `${post.title} | Fusion Chat`,
+    description: post.description || `Systems breakdown: ${post.title} by Fusion Chat .`,
     openGraph: {
       title: post.title,
       description: post.description,

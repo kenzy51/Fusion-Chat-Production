@@ -1,28 +1,29 @@
-
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Neural Infrastructure & Services",
+  // 🚀 Core Domain Pivot: Pointing services cleanly to your new storefront origin
+  metadataBase: new URL("https://www.getfusionchat.com"),
+  title: "Neural Infrastructure & Intelligent Chat Widgets",
   description:
-    "Explore our suite of AI solutions: Neural Voice Identity, Intelligent Scheduling, and Cinematic Content Production engineered for dental growth.",
+    "Explore our suite of conversational AI modules: Autonomous Chat Concierges, Intelligent Scheduling integrations, and high-converting lead pipelines engineered for premium practices.",
   keywords: [
-    "Neural Voice Identity",
-    "AI Medical Scheduling",
-    "ElevenLabs Dental Integration",
-    "Clinical Videography NYC",
-    "Dental Ad Agency NYC",
-    "AI Patient Summarization",
+    "Fusion Chat AI Services",
+    "AI Medical Scheduling Widget",
+    "Autonomous Lead Qualification",
+    "High-Ticket B2B Chat Architecture",
+    "Practice Management AI Integration",
+    "Automated Patient Intake Systems",
   ],
   openGraph: {
-    title: "Neural Infrastructure | Fusion AI Agency",
-    description: "Advanced AI automation for modern practices. Bridge the gap between leads and appointments.",
-    url: "https://www.fusionaiagency.com/services",
+    title: "Neural Infrastructure | Fusion Chat AI",
+    description: "Advanced text automation pipelines for premium brands. Bridge the gap between digital web visitors and confirmed calendar bookings.",
+    url: "https://www.getfusionchat.com/services", 
     images: [
       {
-        url: "/services-og.png", // Recommended: a custom image showing your service grid
+        url: "/services-og.png", 
         width: 1200,
         height: 630,
-        alt: "Fusion AI Service Infrastructure",
+        alt: "Fusion Chat AI Service Infrastructure",
       },
     ],
   },
@@ -31,83 +32,83 @@ export const metadata: Metadata = {
 export default function ServicesPage() {
   const services = [
     {
-      title: "Neural Voice Identity",
+      title: "Autonomous Chat Concierge", // 💬 Repositioned to lead with your core chat asset
       status: "Operational",
-      desc: "Instant voice cloning that mirrors your practice's best staff. Sub-500ms response times for seamless, human-like patient interaction.",
+      desc: "High-performance embeddable text agents that mirror your brand's voice. Operates with sub-100ms API response times for instant, interactive user qualification.",
       features: [
-        "One-Click ElevenLabs Integration",
-        "Emotional Tone Mapping",
-        "Custom Brand Vocabulary",
+        "Lightweight JS Snippet Embed",
+        "Context Memory Injection",
+        "Custom Theme Architecture",
       ],
     },
     {
       title: "Intelligent Scheduling",
       status: "Operational",
-      desc: "Zero-touch appointment booking that syncs directly with your practice management software and Google Calendar.",
+      desc: "Zero-touch booking engines that link your chat widget directly with your internal calendar systems (Cal.com, Calendly) or private databases.",
       features: [
         "Real-time Availability Check",
-        "Conflict Resolution",
-        "Instant Booking Confirmation",
+        "Automated Slot Resolution",
+        "Instant Booking Validation",
       ],
     },
     {
-      title: "Call Analytics & Insight",
+      title: "Chat Analytics & Tracking",
       status: "Live",
-      desc: "Full transparency into every interaction. Our engine generates high-fidelity recordings and AI-powered transcripts for every call.",
+      desc: "Full pipeline transparency. Every dialogue thread is instantly archived with structured event payloads to log visitor intent parameters.",
       features: [
-        "Automated Call Recording",
-        "Sentiment Analysis",
-        "Searchable Transcripts",
+        "Real-Time Interaction Logs",
+        "Intent Trajectory Mapping",
+        "Searchable Transcript Arrays",
       ],
     },
     {
       title: "AI-Powered Summarization",
       status: "Live",
-      desc: "Stop reading through logs. Get a concise 1-sentence summary of every patient interaction delivered to your dashboard instantly.",
+      desc: "Stop parsing raw message strings. Receive an operational one-sentence summary of every customer interaction pushed straight to your dashboard.",
       features: [
-        "Executive Call Summaries",
-        "Patient Intent Detection",
-        "Action Item Extraction",
+        "Executive Intent Digests",
+        "Patient Action Extraction",
+        "Automatic Lead Grading",
       ],
     },
     {
-      title: "Precision Email Campaigns",
+      title: "Precision Re-engagement Sequences",
       status: "Operational",
-      desc: "Automated follow-ups triggered by call outcomes. If a patient drops off, Fusion AI initiates a custom re-engagement sequence.",
+      desc: "Automated event-driven sequences triggered by user choices. If a high-value lead drops off before finishing a booking, the widget logs the event for instant follow-up.",
       features: [
-        "Outcome-Based Triggers",
-        "SendGrid Email Automation",
-        "Personalized Patient Journeys",
+        "Drop-off Hook Triggers",
+        "Webhook/API Event Pipelines",
+        "Personalized Conversation States",
       ],
     },
     {
-      title: "Growth Dashboard",
+      title: "Growth Performance Hub",
       status: "Beta",
-      desc: "A centralized hub to monitor call volume, booking conversion rates, and patient acquisition costs in real-time.",
+      desc: "A centralized control center to track unique widget interactions, calendar conversion efficiencies, and platform acquisition data.",
       features: [
-        "Live Performance Metrics",
-        "Call History Archiving",
-        "ROI Tracking",
+        "Live Operational Metrics",
+        "Multi-Tenant Tenant Storage",
+        "ROI Analytics Arrays",
       ],
     },
     {
-      title: "Precision Paid Acquisition",
+      title: "Conversion-Focused Frameworks",
       status: "Operational",
-      desc: "High-intent Meta and Google Search campaigns engineered for dental growth. We architect automated lead flows that feed directly into our neural voice infrastructure.",
+      desc: "High-intent landing pages engineered for technical growth. We architect clean, semantic interfaces designed explicitly to host and feed traffic directly into your custom script nodes.",
       features: [
-        "Local NYC Geo-Targeting",
-        "Intent-Based Search Arbitrage",
-        "ROAS-Focused Optimization",
+        "Ultra-Fast Next.js Rendering",
+        "Structural SEO Optimization",
+        "High-Conversion Copy Structures",
       ],
     },
     {
-      title: "Cinematic Content Production",
-      status: "Live in NYC",
-      desc: "We produce high-end clinical films designed specifically for your ad creative. We capture professional excellence to build immediate patient trust.",
+      title: "Ecosystem Integration Services",
+      status: "Live",
+      desc: "Bespoke system architecture bridging your front-end scripts with your backend controllers. Custom tailored code engines designed to map seamlessly into high-end clinical setups.",
       features: [
-        "4K Clinical Videography",
-        "Professional Lighting & Audio",
-        "Premium Practice Branding",
+        "NestJS Backend Extensions",
+        "MongoDB Data Schema Sync",
+        "Enterprise API Bridging",
       ],
     },
   ];
@@ -119,8 +120,8 @@ export default function ServicesPage() {
           Neural Infrastructure
         </h1>
         <p className="text-zinc-400 text-xl max-w-2xl mb-16">
-          Advanced AI automation for modern practices. We bridge the gap between
-          inbound leads and confirmed appointments.
+          Advanced conversational automation for modern practices. We bridge the gap between
+          digital traffic and locked-in calendar consultations.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

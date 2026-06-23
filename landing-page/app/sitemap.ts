@@ -4,7 +4,7 @@ import { client } from "@/sanity/lib/client"
 import { groq } from "next-sanity"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://www.fusionaiagency.com'
+  const baseUrl = 'https://www.getfusionchat.com'
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

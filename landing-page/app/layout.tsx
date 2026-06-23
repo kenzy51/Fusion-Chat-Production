@@ -3,8 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
 import { Footer } from "./components/Footer";
-// import NextTopLoader from "nextjs-toploader";
-// import NextTopLoader from "nextjs-toploader";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,29 +15,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.fusionaiagency.com"), 
+  metadataBase: new URL("https://www.getfusionchat.com"), 
   title: {
-    // REPOSITIONED: Focus locked completely on systems architecture and heavy tech
-    default: "Fusion AI | NYC Neural Infrastructure & Autonomous Systems",
-    template: "%s | Fusion AI",
+    default: "Fusion Chat | Premium AI Chat Concierge & Autonomous Booking Pipelines",
+    template: "%s | Fusion Chat",
   },
   description:
-    "Bespoke low-latency AI voice nodes and enterprise-grade RAG pipelines for high-performance operations. We engineer autonomous communication networks.",
+    "Bespoke low-latency AI chat concierges and automated lead qualification pipelines for high-ticket industries, luxury MedSpas, and medical practices. Capture, qualify, and book clients 24/7.",
   keywords: [
-    "NYC AI Systems Architect",
-    "Neural Voice Nodes",
-    "Autonomous Business Infrastructure",
-    "Retrieval-Augmented Generation RAG",
-    "Enterprise AI Automation New York",
-    "Medical & Logistics AI Integration",
-    "Bespoke Intelligent Agent Networks"
+    "Fusion Chat AI",
+    "AI Chat Concierge New York",
+    "High-Ticket Lead Automation",
+    "MedSpa AI Chat Widget",
+    "Autonomous Client Acquisition",
+    "Bespoke Conversational Systems",
+    "Luxury Wellness AI Integration"
   ],
   authors: [{ name: "Kanat Nazarov" }],
   openGraph: {
-    title: "Fusion AI | Enterprise Neural Architecture",
-    description: "Low-latency autonomous voice agents and deep RAG knowledge networks.",
-    url: "https://www.fusionaiagency.com",
-    siteName: "Fusion AI",
+    title: "Fusion Chat | Enterprise AI Conversational Architecture",
+    description: "Low-latency autonomous chat widgets and client acquisition pipelines.",
+    url: "https://www.getfusionchat.com",
+    siteName: "Fusion Chat",
     images: [
       {
         url: "/og-image.png", 
@@ -48,6 +46,9 @@ export const metadata: Metadata = {
     ],
     locale: "en_US",
     type: "website",
+  },
+  verification: {
+    google: "vQ3BgmDR-jElI5WkHaCD7nqASJNVeAOwFVvLSy3lfUw",
   },
   icons: {
     icon: [
@@ -60,6 +61,7 @@ export const metadata: Metadata = {
     ],
   },
 };
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -70,7 +72,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-
         <Header />
         {children}
         <Footer />
