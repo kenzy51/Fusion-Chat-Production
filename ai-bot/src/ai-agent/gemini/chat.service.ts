@@ -69,10 +69,15 @@ export class ChatService implements OnModuleInit {
         );
       }
 
-      // Extract system prompts and knowledge base
-      const dynamicKnowledge = currentTenant.voiceConfig?.knowledgeBase || '';
+      const dynamicKnowledge =
+        currentTenant.chatConfig?.knowledgeBase ||
+        currentTenant.voiceConfig?.knowledgeBase ||
+        '';
+
       const dynamicSystemChatPrompt =
-        currentTenant.voiceConfig?.chatPrompt || 'You are a helpful assistant.';
+        currentTenant.chatConfig?.chatPrompt ||
+        currentTenant.voiceConfig?.chatPrompt ||
+        'You are a helpful assistant.';
 
       // Get precision completion from Groq
       const response = await this.groq.chat.completions.create({
@@ -97,7 +102,7 @@ export class ChatService implements OnModuleInit {
       return "I'm having trouble connecting to the systems database. Please try again in a moment.";
     }
   }
- 
+
   async getTenantConfig(tenantId: string): Promise<any> {
     const cacheKey = `tenant:${tenantId}:config`;
     const cached = await this.redis.get(cacheKey);

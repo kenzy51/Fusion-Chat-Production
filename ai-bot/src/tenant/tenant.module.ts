@@ -5,6 +5,7 @@ import { TenantController, PublicTenantController } from './tenant.controller';
 import { Tenant, TenantSchema } from './tenant.schema';
 import { UserModule } from '../user/user.module'; 
 import { AuthModule } from 'src/auth/auth.module';
+import { ChatService } from 'src/ai-agent/gemini/chat.service';
 
 @Module({
   imports: [
@@ -12,8 +13,8 @@ import { AuthModule } from 'src/auth/auth.module';
     UserModule,
     AuthModule, 
   ],
-  providers: [TenantService],
+  providers: [TenantService,ChatService],
   controllers: [TenantController, PublicTenantController], 
-  exports: [MongooseModule],
+  exports: [MongooseModule,ChatService],
 })
 export class TenantModule {}

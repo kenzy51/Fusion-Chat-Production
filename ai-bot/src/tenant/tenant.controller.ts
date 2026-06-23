@@ -12,13 +12,15 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
-import { User } from 'src/user/user.schema'; 
+import { User } from 'src/user/user.schema';
 import { JwtService } from '@nestjs/jwt';
+import { ChatService } from 'src/ai-agent/gemini/chat.service';
 
-@Controller('public-tenant') 
+@Controller('public-tenant')
 export class PublicTenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
+    private readonly chatService: ChatService, // 🎯 Inject your existing ChatService here!
   ) {}
 
   @Get(':slug/widget-config')
@@ -34,15 +36,15 @@ export class PublicTenantController {
 
     if (!tenant) {
       return {
-        name: "AI Support Node",
+        name: 'AI Support Node',
         slug: slug.toLowerCase().trim(),
         primaryColor: '#d4ff33',
         backgroundColor: '#0a0a0a',
         textColor: '#ffffff',
         widgetTitle: 'AI Support Assistant',
         greeting: 'Hello! Setting up configurations. How can I help you today?',
-        knowledgeBase: '', 
-        chatPrompt: '',       
+        knowledgeBase: '',
+        chatPrompt: '',
       };
     }
 
@@ -54,44 +56,51 @@ export class PublicTenantController {
       textColor: tenant.chatConfig?.textColor || '#ffffff',
       widgetTitle: tenant.chatConfig?.widgetTitle || 'AI Assistant',
       greeting: tenant.chatConfig?.greeting || 'Hello!',
-      knowledgeBase: tenant.chatConfig?.knowledgeBase || '', 
-      chatPrompt: tenant.chatConfig?.chatPrompt || '',       
+      knowledgeBase: tenant.chatConfig?.knowledgeBase || '',
+      chatPrompt: tenant.chatConfig?.chatPrompt || '',
     };
   }
-
-  // 🚀 FIXED: Added the missing message routing gateway
   @Post('message')
-  async handleIncomingWidgetMessage(@Body() body: { message: string; slug: string }) {
+  async handleIncomingWidgetMessage(
+    @Body() body: { message: string; slug: string },
+  ) {
     const { message, slug } = body;
 
     if (!slug) {
-      throw new BadRequestException('Cannot initiate matrix lookup: Missing tenant slug mapping.');
+      throw new BadRequestException(
+        'Cannot initiate matrix lookup: Missing tenant slug mapping.',
+      );
     }
 
-    // 🎯 Locate tenant brain context matching the target identifier
+    // 1. Locate the tenant profile dynamically by their unique script slug identifier
     const tenant = await this.tenantModel
       .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
       .lean()
       .exec();
 
     if (!tenant) {
-      throw new NotFoundException('The requested business profile workspace does not exist.');
+      throw new NotFoundException(
+        'The requested business profile workspace does not exist.',
+      );
     }
 
-    // Extract individual isolated intelligence configurations
-    const systemPrompt = tenant.chatConfig?.chatPrompt || 'You are a helpful customer assistant.';
-    const knowledgeBase = tenant.chatConfig?.knowledgeBase || '';
+    try {
+      const aiReply = await this.chatService.generateTextOnlyResponse(
+        message,
+        [], // Pass history array here if your front-end state expands to store it
+        tenant._id.toString(), // Passes the validated business ID node directly to trigger your Redis cache logic
+      );
 
-    // Merge system behavioral parameters with custom company document vectors
-    const isolatedBrainPrompt = `System Persona Setup:\n${systemPrompt}\n\nCompany Knowledge Base Base:\n${knowledgeBase}`;
-
-    // Execute your LLM model pipeline logic processing here:
-    // const aiReply = await this.aiService.generateCompletion(message, isolatedBrainPrompt);
-    const mockReply = `Hello! I am answering directly out of the isolated database brain for [${tenant.name}]. This confirms multi-tenancy is completely working!`;
-
-    return {
-      reply: mockReply, 
-    };
+      return {
+        reply: aiReply, // 🎯 Real answer processed straight out of Groq via your ChatService!
+      };
+    } catch (error) {
+      console.error('Public UI Widget Inference pipeline crash:', error);
+      return {
+        reply:
+          "I'm having trouble connecting to my systems array right now. Please try again shortly!",
+      };
+    }
   }
 }
 
@@ -99,8 +108,8 @@ export class PublicTenantController {
 export class TenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
-    @InjectModel(User.name) private readonly userModel: Model<User>, 
-    private readonly jwtService: JwtService, 
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   private decodeHeaderToken(authHeader: string): any {
@@ -110,7 +119,9 @@ export class TenantController {
     const token = authHeader.split(' ')[1];
     const decoded = this.jwtService.decode(token) as any;
     if (!decoded || !decoded.tenantId || !decoded.sub) {
-      throw new BadRequestException('Security credential token fingerprint corrupt.');
+      throw new BadRequestException(
+        'Security credential token fingerprint corrupt.',
+      );
     }
     return decoded;
   }
@@ -135,18 +146,18 @@ export class TenantController {
           name: user?.name || 'Test User (No DB Match)',
           email: user?.email || 'test@gmail.com',
           role: user?.role || 'admin',
-        }
+        },
       };
     }
 
     return {
       id: tenant._id,
-      name: tenant.name,      
-      slug: tenant.slug,      
+      name: tenant.name,
+      slug: tenant.slug,
       chatConfig: tenant.chatConfig || {},
       user: {
-        name: user?.name || 'Admin Node',   
-        email: user?.email || decoded.email || 'unknown@gmail.com',    
+        name: user?.name || 'Admin Node',
+        email: user?.email || decoded.email || 'unknown@gmail.com',
         role: user?.role || decoded.role || 'admin',
       },
     };
