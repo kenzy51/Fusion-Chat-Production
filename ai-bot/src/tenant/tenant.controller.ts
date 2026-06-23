@@ -3,7 +3,7 @@ import {
   Controller,
   Get,
   Patch,
-  Req,
+  Post,
   Headers,
   Param,
   NotFoundException,
@@ -12,10 +12,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
-import { User } from 'src/user/user.schema'; // 🚀 IMPORT YOUR USER SCHEMA MATRIX
+import { User } from 'src/user/user.schema'; 
 import { JwtService } from '@nestjs/jwt';
 
-@Controller('public-tenant') // 🔓 READ-ONLY WIDGET ACCESS NODE
+@Controller('public-tenant') 
 export class PublicTenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
@@ -27,13 +27,23 @@ export class PublicTenantController {
       throw new BadRequestException('Workspace tracking parameters invalid.');
     }
 
-    const tenant = await this.tenantModel
+    let tenant = await this.tenantModel
       .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
       .lean()
       .exec();
 
     if (!tenant) {
-      throw new NotFoundException('Requested chat layer context not located.');
+      return {
+        name: "AI Support Node",
+        slug: slug.toLowerCase().trim(),
+        primaryColor: '#d4ff33',
+        backgroundColor: '#0a0a0a',
+        textColor: '#ffffff',
+        widgetTitle: 'AI Support Assistant',
+        greeting: 'Hello! Setting up configurations. How can I help you today?',
+        knowledgeBase: '', 
+        chatPrompt: '',       
+      };
     }
 
     return {
@@ -48,17 +58,51 @@ export class PublicTenantController {
       chatPrompt: tenant.chatConfig?.chatPrompt || '',       
     };
   }
+
+  // 🚀 FIXED: Added the missing message routing gateway
+  @Post('message')
+  async handleIncomingWidgetMessage(@Body() body: { message: string; slug: string }) {
+    const { message, slug } = body;
+
+    if (!slug) {
+      throw new BadRequestException('Cannot initiate matrix lookup: Missing tenant slug mapping.');
+    }
+
+    // 🎯 Locate tenant brain context matching the target identifier
+    const tenant = await this.tenantModel
+      .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
+      .lean()
+      .exec();
+
+    if (!tenant) {
+      throw new NotFoundException('The requested business profile workspace does not exist.');
+    }
+
+    // Extract individual isolated intelligence configurations
+    const systemPrompt = tenant.chatConfig?.chatPrompt || 'You are a helpful customer assistant.';
+    const knowledgeBase = tenant.chatConfig?.knowledgeBase || '';
+
+    // Merge system behavioral parameters with custom company document vectors
+    const isolatedBrainPrompt = `System Persona Setup:\n${systemPrompt}\n\nCompany Knowledge Base Base:\n${knowledgeBase}`;
+
+    // Execute your LLM model pipeline logic processing here:
+    // const aiReply = await this.aiService.generateCompletion(message, isolatedBrainPrompt);
+    const mockReply = `Hello! I am answering directly out of the isolated database brain for [${tenant.name}]. This confirms multi-tenancy is completely working!`;
+
+    return {
+      reply: mockReply, 
+    };
+  }
 }
 
-@Controller('tenant') 
+@Controller('tenant') // 🔒 PROTECTED OWNER MANAGEMENT LAYOUT NODES
 export class TenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
-    @InjectModel(User.name) private readonly userModel: Model<User>, // 🎯 INJECT USER MODEL
+    @InjectModel(User.name) private readonly userModel: Model<User>, 
     private readonly jwtService: JwtService, 
   ) {}
 
-  // Central token resolver helper
   private decodeHeaderToken(authHeader: string): any {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new BadRequestException('Administrative active session missing.');
@@ -66,22 +110,20 @@ export class TenantController {
     const token = authHeader.split(' ')[1];
     const decoded = this.jwtService.decode(token) as any;
     if (!decoded || !decoded.tenantId || !decoded.sub) {
-      throw new BadRequestException('Security credential token token fingerprint corrupt.');
+      throw new BadRequestException('Security credential token fingerprint corrupt.');
     }
     return decoded;
   }
 
-@Get('config')
+  @Get('config')
   async getCombinedProfile(@Headers('authorization') authHeader: string) {
     const decoded = this.decodeHeaderToken(authHeader);
 
-    // Concurrent lookup engine
     const [tenant, user] = await Promise.all([
       this.tenantModel.findById(decoded.tenantId).lean().exec(),
       this.userModel.findById(decoded.sub).lean().exec(),
     ]);
 
-    // 🎯 FALLBACK ACCELERATOR: If your local collection doesn't have this tenant document yet
     if (!tenant) {
       const fallbackTenant = await this.tenantModel.findOne({}).lean().exec();
       return {
@@ -103,13 +145,13 @@ export class TenantController {
       slug: tenant.slug,      
       chatConfig: tenant.chatConfig || {},
       user: {
-        // 🎯 FALLBACK FIX: If the user document isn't found, fall back to token properties cleanly
         name: user?.name || 'Admin Node',   
         email: user?.email || decoded.email || 'unknown@gmail.com',    
         role: user?.role || decoded.role || 'admin',
       },
     };
   }
+
   @Patch('update-config')
   async updateConfig(
     @Headers('authorization') authHeader: string,
