@@ -21,20 +21,20 @@ export default function Hero() {
           <div className="flex items-center gap-3 mb-6">
             <span className="h-px w-8 bg-[#d4ff33]" />
             <span className="text-[#d4ff33] font-mono tracking-[0.3em] uppercase text-[10px] md:text-xs">
-              NYC Strategic Intelligence // Seamless Deployment
+              Conversational Intelligence // Seamless Storefront Integration
             </span>
           </div>
           
           <h1 className="text-6xl lg:text-[100px] font-bold text-white tracking-tighter leading-[0.85] mb-10">
-            Autonomous Ops.
+            Autonomous Chats.
             <br />
             <span className="text-[#d4ff33]">Zero Friction.</span>
           </h1>
           
           <p className="text-xl lg:text-2xl text-zinc-300 font-light leading-relaxed max-w-2xl mb-12">
-            The most convenient neural infrastructure for NYC businesses. 
-            We deploy <span className="text-white font-medium">self-managing AI agents</span> that handle your 
-            inbound, outbound, and scheduling while you focus on high-level scaling.
+            The ultimate client acquisition engine for premium practices. 
+            We deploy <span className="text-white font-medium">self-managing AI concierges</span> that qualify 
+            traffic, overcome friction, and book high-ticket consultations 24/7.
           </p>
 
           <div className="flex flex-wrap gap-5">
@@ -48,7 +48,7 @@ export default function Hero() {
             </button>
           </div>
           
-          {/* System Status / Convenience Badge */}
+          {/* System Status / Conversion Badge */}
           <div className="mt-16 flex flex-wrap items-center gap-8 text-zinc-500 font-mono text-[10px] uppercase tracking-[0.2em]">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
@@ -59,11 +59,11 @@ export default function Hero() {
             </div>
             <div className="hidden md:block h-3 w-px bg-zinc-800" />
             <div className="flex items-center gap-2">
-              <span className="text-white">24/7</span> Autonomous Handling
+              <span className="text-white">24/7</span> Automated Qualification
             </div>
             <div className="hidden md:block h-3 w-px bg-zinc-800" />
             <div className="flex items-center gap-2">
-              <span className="text-white">Sub-500ms</span> Response Latency
+              <span className="text-white">Sub-100ms</span> Pipeline Latency
             </div>
           </div>
         </div>
