@@ -19,18 +19,12 @@ async function bootstrap() {
 
   // 🚀 THE CRITICAL CORS FIX: Allow your Next.js frontend to talk to your API
   app.enableCors({
-    origin: [
-      'http://localhost:3000', // Local Next.js development server
-      'https://fusion-chat-production.vercel.app', 
-      'https://ai-soul-spa-1.vercel.app' ,
-      'https://kanatnazarov.com' ,
-      'https://fusionaiagency.com' ,
-      'https://getfusionchat.com' ,
-      process.env.FRONTEND_URL, 
-    ].filter(Boolean),
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // Allow passing cookies or authorization headers
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true, // 💥 CRITICAL: This now works perfectly with any domain
+    allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With',
   });
   // 3. Bind the WebSocket adapter for the /media-stream
   app.useWebSocketAdapter(new WsAdapter(app));
