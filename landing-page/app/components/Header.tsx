@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const pathname = usePathname()
-  if (pathname.startsWith('/studio')){
-    return null 
+  const pathname = usePathname();
+  if (pathname.startsWith("/studio")) {
+    return null;
   }
   // Prevent scrolling when mobile menu is open
   useEffect(() => {
@@ -23,7 +23,6 @@ export default function Header() {
     { name: "Services", href: "/services" },
     { name: "Blog", href: "/blog" },
     { name: "Pricing", href: "/pricing" },
-    { name: "Contact", href: "/contact" },
   ];
 
   return (
@@ -126,9 +125,11 @@ export default function Header() {
               {link.name}
             </Link>
           ))}
-          <button className="bg-[#d4ff33] text-black px-10 py-4 rounded-full font-bold text-xl mt-4 shadow-[0_0_20px_rgba(212,255,51,0.2)]">
-            Get Started
-          </button>
+          <Link href="/contact">
+            <button className="bg-[#d4ff33] text-black px-10 py-4 rounded-full font-bold text-xl mt-4 shadow-[0_0_20px_rgba(212,255,51,0.2)] hover:shadow-[0_0_40px_rgba(212,255,51,0.4)] transition-all cursor-pointer transform hover:scale-105 active:scale-95">
+              Get Started
+            </button>
+          </Link>
         </div>
 
         <div className="absolute bottom-12 text-zinc-600 font-mono text-xs uppercase tracking-[0.3em]">

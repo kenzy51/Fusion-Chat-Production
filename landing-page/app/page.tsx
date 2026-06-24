@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AISapience } from "./components/AiSapience";
+import { ChatSapience } from "./components/AiSapience";
 import { CaseStudy } from "./components/CaseStudy";
 import { Comparison } from "./components/Comparison";
 import { FeaturesGrid } from "./components/FeaturesGrid";
@@ -18,7 +18,7 @@ export default function Home() {
       <VoiceLab />
       <CaseStudy />
       <Pricing />
-      <AISapience />
+      <ChatSapience />
       {/* <CreativeEdge /> */}
     </div>
   );
