@@ -82,9 +82,11 @@ export default function Header() {
                 {link.name}
               </Link>
             ))}
-            <button className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-[#d4ff33] transition-all">
-              Get Started
-            </button>
+            <Link href="/contact">
+              <button className="bg-white text-black px-6 py-2 rounded-full font-bold text-sm hover:bg-[#d4ff33] transition-all">
+                Get Started
+              </button>
+            </Link>
           </div>
 
           {/* Burger Button - Stays above everything */}
