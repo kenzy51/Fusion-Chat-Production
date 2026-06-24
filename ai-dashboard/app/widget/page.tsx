@@ -18,58 +18,69 @@ export default function StandalonePublicWidgetPage() {
   );
 }
 
-// 🚀 PRODUCTION-READY RICH LAYOUT PARSER FOR AI ANSWERS
+// 🚀 BULLETPROOF PRODUCTION-GRADE LAYOUT PARSER FOR PUBLIC CHAT CLIENT
 function FormattedMessage({ content, primaryColor }: { content: string; primaryColor: string }) {
   if (!content) return null;
 
-  // Split text by lines to parse headers, paragraphs, and list arrays cleanly
   const lines = content.split("\n");
 
+  const stripMarkdownTokens = (text: string) => {
+    return text.replace(/\*\*/g, "").trim();
+  };
+
   return (
-    <div className="space-y-2 text-sm md:text-base leading-relaxed tracking-wide">
+    <div className="space-y-3 text-sm md:text-base leading-relaxed tracking-wide">
       {lines.map((line, lineIdx) => {
         const trimmedLine = line.trim();
+        if (!trimmedLine) return <div key={lineIdx} className="h-2" />;
 
-        if (!trimmedLine) {
-          return <div key={lineIdx} className="h-2" />;
+        // 1. Detect if the entire line is structured as a standalone Title block
+        if (trimmedLine.startsWith("**") && trimmedLine.endsWith("**")) {
+          return (
+            <h5
+              key={lineIdx}
+              className="font-black text-white text-base md:text-lg tracking-tight mt-4 mb-1 block first:mt-0"
+            >
+              {stripMarkdownTokens(trimmedLine)}
+            </h5>
+          );
         }
 
-        // 1. Detect Bullet Arrays/Lists (starting with '-', '*', or '•')
+        // 2. Detect Bullet Lists / Array Elements
         if (trimmedLine.startsWith("-") || trimmedLine.startsWith("*") || trimmedLine.startsWith("•")) {
-          const rawText = trimmedLine.replace(/^[-*•]\s*/, "");
+          const cleanListText = stripMarkdownTokens(trimmedLine.replace(/^[-*•]\s*/, ""));
           return (
-            <div key={lineIdx} className="flex items-start gap-2 pl-2 my-1">
-              <span style={{ color: primaryColor }} className="text-sm font-bold mt-0.5">•</span>
-              <span className="flex-1">{renderBoldText(rawText)}</span>
+            <div key={lineIdx} className="flex items-start gap-2.5 pl-1 my-1">
+              <span style={{ color: primaryColor }} className="text-base font-bold mt-0.5 leading-none">•</span>
+              <span className="flex-1 font-medium">{cleanListText}</span>
             </div>
           );
         }
 
-        // 2. Standard block parsing with potential bold elements
+        // 3. Handle mixed inline elements safely without spilling text syntax tags
+        const containsInlineBold = trimmedLine.includes("**");
+        if (containsInlineBold) {
+          const blocks = trimmedLine.split(/\*\*([\s\S]*?)\*\*/g);
+          return (
+            <p key={lineIdx} className="font-medium">
+              {blocks.map((block, bIdx) => (
+                <span key={bIdx} className={bIdx % 2 === 1 ? "font-bold text-white font-black" : ""}>
+                  {block}
+                </span>
+              ))}
+            </p>
+          );
+        }
+
+        // Standard body paragraph line
         return (
-          <p key={lineIdx} className="block">
-            {renderBoldText(trimmedLine)}
+          <p key={lineIdx} className="font-medium">
+            {trimmedLine}
           </p>
         );
       })}
     </div>
   );
-}
-
-// Helper to find and parse **Title** or **Bold Text** tags natively inside strings
-function renderBoldText(text: string) {
-  const parts = text.split(/\*\*([\s\S]*?)\*\*/g);
-  return parts.map((part, i) => {
-    // Alternate tokens represent matching chunks inside the regex blocks
-    if (i % 2 === 1) {
-      return (
-        <strong key={i} className="font-extrabold text-white text-base md:text-lg block mt-3 mb-1 first:mt-0 tracking-tight">
-          {part}
-        </strong>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
 }
 
 function WidgetContent() {
@@ -194,7 +205,6 @@ function WidgetContent() {
                       color: config.textColor || "#ffffff",
                     }
               }
-              // 🚀 Sizing optimized: switched padding and sizes to text-sm/text-base layouts
               className="max-w-[88%] rounded-2xl px-4 py-3 shadow-md border border-white/5"
             >
               {msg.role === "user" ? (

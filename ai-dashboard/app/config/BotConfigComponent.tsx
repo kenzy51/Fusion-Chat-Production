@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Save,
   RefreshCw,
@@ -39,22 +39,84 @@ const getCookie = (name: string) => {
   return null;
 };
 
-export default function BotConfigComponent() {
-  const [activeTab, setActiveTab] = useState<
-    "prompting" | "account" | "customizer"
-  >("prompting");
+// 🚀 CLEAN TOKENS MARKDOWN REMOVER & VISUAL LAYER GENERATOR
+function FormattedPreviewMessage({ content, primaryColor }: { content: string; primaryColor: string }) {
+  if (!content) return null;
 
-  // Dynamic Workspace Identifiers
+  const lines = content.split("\n");
+
+  // Helper to completely clean out raw `**` syntax from a string segment
+  const stripMarkdownTokens = (text: string) => {
+    return text.replace(/\*\*/g, "").trim();
+  };
+
+  return (
+    <div className="space-y-3 text-sm md:text-base leading-relaxed tracking-wide text-zinc-200">
+      {lines.map((line, lineIdx) => {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return <div key={lineIdx} className="h-2" />;
+
+        // 1. Detect if the entire line was meant to be a Bold Header Layer
+        if (trimmedLine.startsWith("**") && trimmedLine.endsWith("**")) {
+          return (
+            <h5
+              key={lineIdx}
+              className="font-black text-white text-base md:text-lg tracking-tight mt-4 mb-1 block first:mt-0"
+            >
+              {stripMarkdownTokens(trimmedLine)}
+            </h5>
+          );
+        }
+
+        // 2. Detect Bullet Arrays / List Blocks
+        if (trimmedLine.startsWith("-") || trimmedLine.startsWith("*") || trimmedLine.startsWith("•")) {
+          // Extract text and remove both the bullet character and any bold brackets within it
+          const cleanListText = stripMarkdownTokens(trimmedLine.replace(/^[-*•]\s*/, ""));
+          return (
+            <div key={lineIdx} className="flex items-start gap-2.5 pl-1 my-1">
+              <span style={{ color: primaryColor }} className="text-base font-bold mt-0.5 leading-none">•</span>
+              <span className="flex-1 font-medium text-zinc-300">{cleanListText}</span>
+            </div>
+          );
+        }
+
+        // 3. Fallback: Parse line while handling isolated inline bold elements safely
+        const containsInlineBold = trimmedLine.includes("**");
+        if (containsInlineBold) {
+          const blocks = trimmedLine.split(/\*\*([\s\S]*?)\*\*/g);
+          return (
+            <p key={lineIdx} className="font-medium text-zinc-300">
+              {blocks.map((block, bIdx) => (
+                <span key={bIdx} className={bIdx % 2 === 1 ? "font-bold text-white" : ""}>
+                  {block}
+                </span>
+              ))}
+            </p>
+          );
+        }
+
+        // Standard plain paragraph fallback line
+        return (
+          <p key={lineIdx} className="font-medium text-zinc-300">
+            {trimmedLine}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function BotConfigComponent() {
+  const [activeTab, setActiveTab] = useState<"prompting" | "account" | "customizer">("prompting");
+
   const [tenantName, setTenantName] = useState("");
   const [tenantSlug, setTenantSlug] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🎯 NEW: Admin Personal Metadata State Fields
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminRole, setAdminRole] = useState("");
 
-  // Customizer Input States
   const [knowledge, setKnowledge] = useState("");
   const [chatPrompt, setChatPrompt] = useState("");
   const [greeting, setGreeting] = useState("");
@@ -69,38 +131,33 @@ export default function BotConfigComponent() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [previewMessages, isBotTyping]);
+
   useEffect(() => {
     const hydrateDynamicWorkspace = async () => {
       try {
         const token = getCookie("access_token");
-
         const profileRes = await fetch(`${BASE_URL}/tenant/config`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (profileRes.ok) {
           const profileData = await profileRes.json();
-
-          // 🚀 RESILIENT EXTRACTORS: Checks all possible structural variants
-          const extractedSlug =
-            profileData.slug || profileData.chatConfig?.slug || "test";
+          const extractedSlug = profileData.slug || profileData.chatConfig?.slug || "test";
           setTenantSlug(extractedSlug);
           setTenantName(profileData.name || "Fusion Space");
 
-          // Hydrate User Profile Fields safely
-          setAdminName(
-            profileData.user?.name || profileData.name || "Admin Node",
-          );
+          setAdminName(profileData.user?.name || profileData.name || "Admin Node");
           setAdminEmail(profileData.user?.email || "test@gmail.com");
           setAdminRole(profileData.user?.role || "admin");
 
-          // Fetch widget layout configs matching this workspace
-          const configRes = await fetch(
-            `${BASE_URL}/public-tenant/${extractedSlug}/widget-config`,
-          );
+          const configRes = await fetch(`${BASE_URL}/public-tenant/${extractedSlug}/widget-config`);
           if (configRes.ok) {
             const remoteData = await configRes.json();
-
             setWidgetTitle(remoteData.widgetTitle || "AI Assistant");
             setGreeting(remoteData.greeting || "Hello!");
             setPrimaryColor(remoteData.primaryColor || "#d4ff33");
@@ -112,9 +169,7 @@ export default function BotConfigComponent() {
             setPreviewMessages([
               {
                 role: "assistant",
-                content:
-                  remoteData.greeting ||
-                  "Hello! Drop a message to test my live configurations.",
+                content: remoteData.greeting || "Hello! Drop a message to test my live configurations.",
               },
             ]);
           }
@@ -185,10 +240,7 @@ export default function BotConfigComponent() {
 
       if (res.ok) {
         const data = await res.json();
-        setPreviewMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: data.reply },
-        ]);
+        setPreviewMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
       }
     } catch (err) {
       console.error(err);
@@ -196,10 +248,8 @@ export default function BotConfigComponent() {
       setIsBotTyping(false);
     }
   };
-  // 🎯 FORCE PRODUCTION ORIGIN FOR THE EXTENSION SNIPPET TEXT
-  // This ensures that even if you look at the dashboard on localhost, the text box shows the live Vercel URL!
-  const PRODUCTION_FRONTEND_URL = "https://fusion-chat-production.vercel.app";
 
+  const PRODUCTION_FRONTEND_URL = "https://fusion-chat-production.vercel.app";
   const embedCodeSnippet = `<script>
   window.FusionAIChatConfig = { tenantSlug: "${tenantSlug || "workspace"}" };
 </script>
@@ -214,13 +264,12 @@ export default function BotConfigComponent() {
   }
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 bg-black text-white min-h-screen selection:bg-[#d4ff33] selection:text-black">
+    <div className="p-6 lg:p-10 max-w-[1600px] mx-auto space-y-8 bg-black text-white min-h-screen selection:bg-[#d4ff33] selection:text-black font-sans antialiased">
       {/* HEADER SEGMENT */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-white/5 pb-6">
         <div>
           <div className="flex items-center gap-2 text-[#d4ff33] text-[10px] font-black uppercase tracking-[0.3em] mb-1">
-            <Cpu size={12} className="animate-pulse" /> workspace node:{" "}
-            {tenantSlug}
+            <Cpu size={12} className="animate-pulse" /> workspace node: {tenantSlug}
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic text-zinc-100">
             {activeTab === "prompting" && "Neural Architecture"}
@@ -232,13 +281,9 @@ export default function BotConfigComponent() {
         <button
           onClick={handleUpdate}
           disabled={isSaving}
-          className="w-full md:w-auto bg-[#d4ff33] text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 hover:bg-[#c2eb2f] active:scale-[0.98] transition-all duration-300 disabled:opacity-40"
+          className="w-full md:w-auto bg-[#d4ff33] text-black px-8 py-4 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 hover:bg-[#c2eb2f] active:scale-[0.98] transition-all duration-300 disabled:opacity-40 cursor-pointer"
         >
-          {isSaving ? (
-            <RefreshCw className="animate-spin" size={14} />
-          ) : (
-            <Save size={14} />
-          )}
+          {isSaving ? <RefreshCw className="animate-spin" size={14} /> : <Save size={14} />}
           {isSaving ? "Syncing..." : "Push Architecture"}
         </button>
       </div>
@@ -247,19 +292,19 @@ export default function BotConfigComponent() {
       <div className="flex flex-wrap gap-2 border-b border-white/5 pb-4">
         <button
           onClick={() => setActiveTab("prompting")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "prompting" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
+          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border cursor-pointer ${activeTab === "prompting" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
         >
           <Sliders size={14} /> Neural Prompting Engine
         </button>
         <button
           onClick={() => setActiveTab("customizer")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "customizer" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
+          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border cursor-pointer ${activeTab === "customizer" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
         >
           <Palette size={14} /> Widget Customizer & Sandbox
         </button>
         <button
           onClick={() => setActiveTab("account")}
-          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border ${activeTab === "account" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
+          className={`px-6 py-3 rounded-xl font-bold uppercase text-[11px] tracking-wider transition-all flex items-center gap-2.5 border cursor-pointer ${activeTab === "account" ? "bg-[#d4ff33] text-black border-[#d4ff33]" : "bg-zinc-950 text-zinc-500 border-white/5 hover:text-zinc-200"}`}
         >
           <Building2 size={14} /> Workspace Account Data
         </button>
@@ -269,10 +314,7 @@ export default function BotConfigComponent() {
       {activeTab === "prompting" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-8">
-            <ConfigCard
-              icon={<Database size={14} />}
-              title="System Knowledge Memory Array"
-            >
+            <ConfigCard icon={<Database size={14} />} title="System Knowledge Memory Array">
               <textarea
                 className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y"
                 value={knowledge}
@@ -280,10 +322,7 @@ export default function BotConfigComponent() {
                 placeholder="Inject clean text documentation vectors here..."
               />
             </ConfigCard>
-            <ConfigCard
-              icon={<MessageCircle size={14} />}
-              title="Core Persona Logic Constraints"
-            >
+            <ConfigCard icon={<MessageCircle size={14} />} title="Core Persona Logic Constraints">
               <textarea
                 className="w-full bg-zinc-950/40 border border-white/5 rounded-2xl p-5 text-zinc-300 font-mono text-xs leading-relaxed outline-none focus:border-[#d4ff33]/20 focus:bg-zinc-950/80 transition-all duration-300 h-[340px] resize-y"
                 value={chatPrompt}
@@ -293,10 +332,7 @@ export default function BotConfigComponent() {
             </ConfigCard>
           </div>
           <div className="lg:col-span-4 space-y-8">
-            <ConfigCard
-              icon={<MessageSquareQuote size={14} />}
-              title="Initial Welcome Trigger Message"
-            >
+            <ConfigCard icon={<MessageSquareQuote size={14} />} title="Initial Welcome Trigger Message">
               <textarea
                 value={greeting}
                 onChange={(e) => setGreeting(e.target.value)}
@@ -304,38 +340,23 @@ export default function BotConfigComponent() {
                 placeholder="Automated chat welcome script block..."
               />
             </ConfigCard>
-            <ConfigCard
-              icon={<Activity size={14} />}
-              title="Node Cluster Architecture Runtime"
-            >
+            <ConfigCard icon={<Activity size={14} />} title="Node Cluster Architecture Runtime">
               <div className="space-y-1.5 pt-1">
                 <StatusItem label="CORE ENGINE" value="Llama-3.1-8B-Instant" />
-                <StatusItem
-                  label="VECTOR WEIGHTS"
-                  value="Dynamic Grow Embeddings"
-                />
-                <StatusItem
-                  label="CACHE FRAMEWORK"
-                  value="Redis In-Memory KeyStore"
-                />
-                <StatusItem
-                  label="DATA TENANCY"
-                  value="Dynamic Isolated Tenant Separation"
-                />
+                <StatusItem label="VECTOR WEIGHTS" value="Dynamic Grow Embeddings" />
+                <StatusItem label="CACHE FRAMEWORK" value="Redis In-Memory KeyStore" />
+                <StatusItem label="DATA TENANCY" value="Dynamic Isolated Tenant Separation" />
               </div>
             </ConfigCard>
           </div>
         </div>
       )}
 
-      {/* 🎨 VISUAL BRANDING TAB */}
+      {/* VISUAL BRANDING TAB */}
       {activeTab === "customizer" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-7 space-y-6">
-            <ConfigCard
-              icon={<Palette size={14} />}
-              title="Visual Design Modifiers"
-            >
+            <ConfigCard icon={<Palette size={14} />} title="Visual Design Modifiers">
               <div className="space-y-4 pt-2">
                 <div>
                   <label className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">
@@ -407,13 +428,9 @@ export default function BotConfigComponent() {
                 </div>
               </div>
             </ConfigCard>
-            <ConfigCard
-              icon={<Terminal size={14} />}
-              title="Deployment Integration Copy Block"
-            >
+            <ConfigCard icon={<Terminal size={14} />} title="Deployment Integration Copy Block">
               <p className="text-xs text-zinc-500 mb-3 leading-relaxed">
-                Paste this code snippet right into the bottom of your website
-                `body` to deploy this chatbot globally.
+                Paste this code snippet right into the bottom of your website `body` to deploy this chatbot globally.
               </p>
               <pre className="p-4 bg-zinc-950 rounded-xl text-[11px] font-mono text-zinc-400 overflow-x-auto border border-white/5 whitespace-pre-wrap select-all">
                 {embedCodeSnippet}
@@ -422,64 +439,51 @@ export default function BotConfigComponent() {
           </div>
 
           {/* SANDBOX CANVAS VIEW */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center min-h-[600px] border border-white/5 bg-zinc-950/20 rounded-[32px] p-6 relative overflow-hidden backdrop-blur-xl">
+          <div className="lg:col-span-5 flex flex-col items-center justify-center min-h-[640px] border border-white/5 bg-zinc-950/20 rounded-[32px] p-6 relative overflow-hidden backdrop-blur-xl">
             <div className="absolute top-4 left-6 flex items-center gap-2 text-zinc-500 text-[10px] font-bold uppercase tracking-widest pointer-events-none">
               <Eye size={12} /> Sandbox Execution View
             </div>
             {isPreviewOpen && (
               <div
                 style={{ backgroundColor: backgroundColor }}
-                className="w-full max-w-[380px] h-[520px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300"
+                className="w-full max-w-[390px] h-[540px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden transition-all duration-300"
               >
-                <div
-                  style={{ borderColor: `${primaryColor}20` }}
-                  className="p-4 border-b flex items-center justify-between bg-white/[0.02]"
-                >
+                <div style={{ borderColor: `${primaryColor}20` }} className="p-4 border-b flex items-center justify-between bg-white/[0.02]">
                   <div className="flex items-center gap-3">
                     <div
-                      style={{
-                        backgroundColor: `${primaryColor}20`,
-                        color: primaryColor,
-                      }}
+                      style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}
                       className="w-8 h-8 rounded-full flex items-center justify-center"
                     >
                       <Bot size={16} />
                     </div>
                     <div>
-                      <h4
-                        style={{ color: textColor }}
-                        className="text-xs font-black tracking-tight"
-                      >
+                      <h4 style={{ color: textColor }} className="text-sm font-black tracking-tight">
                         {widgetTitle}
                       </h4>
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
-                        Agent Online
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Agent Online
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 font-sans text-xs bg-black/20">
+                
+                {/* 🚀 UPGRADED VISUAL CHAT VIEW WITH ACCURATE HIGHER SIZING SCALE */}
+                <div className="flex-1 p-4 overflow-y-auto space-y-4 font-sans bg-black/20 text-sm md:text-base">
                   {previewMessages.map((msg, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
+                    <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div
                         style={
                           msg.role === "user"
-                            ? {
-                                backgroundColor: primaryColor,
-                                color: "#000000",
-                              }
-                            : {
-                                backgroundColor: "rgba(255,255,255,0.04)",
-                                color: textColor,
-                              }
+                            ? { backgroundColor: primaryColor, color: "#000000" }
+                            : { backgroundColor: "rgba(255,255,255,0.04)", color: textColor }
                         }
-                        className="max-w-[80%] rounded-xl px-3.5 py-2.5 font-medium leading-relaxed"
+                        className="max-w-[88%] rounded-2xl px-4 py-3 shadow-md border border-white/5"
                       >
-                        {msg.content}
+                        {msg.role === "user" ? (
+                          <p className="text-sm md:text-base font-semibold leading-relaxed">{msg.content}</p>
+                        ) : (
+                          <FormattedPreviewMessage content={msg.content} primaryColor={primaryColor} />
+                        )}
                       </div>
                     </div>
                   ))}
@@ -487,31 +491,30 @@ export default function BotConfigComponent() {
                     <div className="flex justify-start">
                       <div
                         style={{ color: textColor }}
-                        className="bg-white/[0.04] rounded-xl px-4 py-3 font-mono text-[10px] tracking-widest opacity-40 animate-pulse"
+                        className="bg-white/[0.04] border border-white/5 rounded-2xl px-5 py-3.5 font-mono text-[10px] tracking-[0.25em] opacity-40 animate-pulse"
                       >
                         PROCESSING MATRIX...
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
-                <form
-                  onSubmit={handleSendPreviewMessage}
-                  className="p-3 border-t border-white/5 bg-white/[0.01] flex gap-2"
-                >
+                
+                <form onSubmit={handleSendPreviewMessage} className="p-3.5 border-t border-white/5 bg-white/[0.01] flex gap-3">
                   <input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Ask agent parameters..."
                     style={{ color: textColor }}
-                    className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-3 text-xs outline-none focus:border-white/10"
+                    className="flex-1 bg-zinc-950 border border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/10"
                   />
                   <button
                     type="submit"
                     style={{ backgroundColor: primaryColor }}
-                    className="p-3 rounded-xl text-black hover:scale-105 active:scale-95 transition-transform"
+                    className="p-3.5 rounded-xl text-black hover:scale-105 active:scale-95 transition-transform cursor-pointer flex items-center justify-center shadow-lg"
                   >
-                    <Send size={12} />
+                    <Send size={14} />
                   </button>
                 </form>
               </div>
@@ -519,7 +522,7 @@ export default function BotConfigComponent() {
             <button
               onClick={() => setIsPreviewOpen(!isPreviewOpen)}
               style={{ backgroundColor: primaryColor }}
-              className="absolute bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-transform z-50"
+              className="absolute bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-transform z-50 cursor-pointer"
             >
               <Bot size={20} className="text-black" />
             </button>
@@ -527,42 +530,16 @@ export default function BotConfigComponent() {
         </div>
       )}
 
-      {/* 👤 ACCOUNT WRAPPER VIEW */}
+      {/* ACCOUNT WRAPPER VIEW */}
       {activeTab === "account" && (
         <div className="max-w-4xl mx-auto space-y-6">
-          <ConfigCard
-            icon={<Building2 size={14} />}
-            title="Dynamic Workspace Data Registry Summary"
-          >
+          <ConfigCard icon={<Building2 size={14} />} title="Dynamic Workspace Data Registry Summary">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              {/* Company & Workspace Slugs */}
-              <AccountField
-                icon={<Building2 size={16} />}
-                label="Registered Workspace Company Name"
-                value={tenantName}
-              />
-              <AccountField
-                icon={<Terminal size={16} />}
-                label="Isolation Domain Slug Identifier"
-                value={`/${tenantSlug || "unknown"}`}
-              />
-
-              {/* 🚀 ADMIN USER METADATA FIELDS */}
-              <AccountField
-                icon={<User size={16} />}
-                label="Active Administrator Name"
-                value={adminName}
-              />
-              <AccountField
-                icon={<Mail size={16} />}
-                label="Corporate Administrative Account Gmail"
-                value={adminEmail}
-              />
-              <AccountField
-                icon={<ShieldAlert size={16} />}
-                label="Infrastructural Node Authority Role"
-                value={adminRole.toUpperCase()}
-              />
+              <AccountField icon={<Building2 size={16} />} label="Registered Workspace Company Name" value={tenantName} />
+              <AccountField icon={<Terminal size={16} />} label="Isolation Domain Slug Identifier" value={`/${tenantSlug || "unknown"}`} />
+              <AccountField icon={<User size={16} />} label="Active Administrator Name" value={adminName} />
+              <AccountField icon={<Mail size={16} />} label="Corporate Administrative Account Gmail" value={adminEmail} />
+              <AccountField icon={<ShieldAlert size={16} />} label="Infrastructural Node Authority Role" value={adminRole.toUpperCase()} />
             </div>
           </ConfigCard>
         </div>
@@ -584,39 +561,23 @@ function ConfigCard({ icon, title, children }: any) {
     </div>
   );
 }
+
 function StatusItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center py-2.5 border-b border-white/[0.02] last:border-0">
-      <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">
-        {label}
-      </span>
-      <span className="text-[11px] text-zinc-300 font-mono font-medium tracking-tight">
-        {value}
-      </span>
+      <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">{label}</span>
+      <span className="text-[11px] text-zinc-300 font-mono font-medium tracking-tight">{value}</span>
     </div>
   );
 }
-function AccountField({
-  icon,
-  label,
-  value,
-}: {
-  icon: any;
-  label: string;
-  value: string;
-}) {
+
+function AccountField({ icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <div className="p-4 bg-zinc-950/60 border border-white/5 rounded-xl flex items-start gap-4">
-      <div className="p-2.5 bg-white/[0.02] border border-white/5 rounded-lg text-zinc-500">
-        {icon}
-      </div>
+      <div className="p-2.5 bg-white/[0.02] border border-white/5 rounded-lg text-zinc-500">{icon}</div>
       <div className="space-y-0.5">
-        <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">
-          {label}
-        </span>
-        <span className="text-sm font-semibold text-zinc-200 block truncate">
-          {value}
-        </span>
+        <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider block">{label}</span>
+        <span className="text-sm font-semibold text-zinc-200 block truncate">{value}</span>
       </div>
     </div>
   );
