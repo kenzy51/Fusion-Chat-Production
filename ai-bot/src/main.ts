@@ -24,6 +24,8 @@ async function bootstrap() {
       'https://fusion-chat-production.vercel.app', 
       'https://ai-soul-spa-1.vercel.app' ,
       'https://kanatnazarov.com' ,
+      'https://fusionaiagency.com' ,
+      'https://getfusionchat.com' ,
       process.env.FRONTEND_URL, 
     ].filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
