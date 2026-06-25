@@ -19,10 +19,13 @@ const mongoose_2 = require("mongoose");
 const tenant_schema_1 = require("./tenant.schema");
 const user_schema_1 = require("../user/user.schema");
 const jwt_1 = require("@nestjs/jwt");
+const chat_service_1 = require("../ai-agent/gemini/chat.service");
 let PublicTenantController = class PublicTenantController {
     tenantModel;
-    constructor(tenantModel) {
+    chatService;
+    constructor(tenantModel, chatService) {
         this.tenantModel = tenantModel;
+        this.chatService = chatService;
     }
     async getPublicWidgetConfig(slug) {
         if (!slug || slug === 'undefined' || slug === 'workspace') {
@@ -33,7 +36,18 @@ let PublicTenantController = class PublicTenantController {
             .lean()
             .exec();
         if (!tenant) {
-            throw new common_1.NotFoundException('Requested chat layer context not located.');
+            return {
+                name: 'AI Support Node',
+                slug: slug.toLowerCase().trim(),
+                primaryColor: '#d4ff33',
+                backgroundColor: '#0a0a0a',
+                textColor: '#ffffff',
+                widgetTitle: 'AI Support Assistant',
+                greeting: 'Hello! Setting up configurations. How can I help you today?',
+                knowledgeBase: '',
+                chatPrompt: '',
+                leadFormPolicy: 'optional',
+            };
         }
         return {
             name: tenant.name,
@@ -45,7 +59,42 @@ let PublicTenantController = class PublicTenantController {
             greeting: tenant.chatConfig?.greeting || 'Hello!',
             knowledgeBase: tenant.chatConfig?.knowledgeBase || '',
             chatPrompt: tenant.chatConfig?.chatPrompt || '',
+            leadFormPolicy: tenant.chatConfig?.leadFormPolicy || 'optional',
         };
+    }
+    async initializeLead(tenantSlug, conversationId, formData) {
+        if (!tenantSlug || !conversationId) {
+            throw new common_1.BadRequestException('Initialization transaction rejected: Missing critical tracking parameters.');
+        }
+        return await this.chatService.recordFormAction(tenantSlug, conversationId, formData);
+    }
+    async handleIncomingWidgetMessage(body) {
+        const { message, slug, conversationId, history } = body;
+        if (!slug || !conversationId) {
+            throw new common_1.BadRequestException('Cannot initiate matrix lookup: Missing tenant validation tokens.');
+        }
+        const tenant = await this.tenantModel
+            .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
+            .lean()
+            .exec();
+        if (!tenant) {
+            throw new common_1.NotFoundException('The requested business profile workspace does not exist.');
+        }
+        try {
+            const passedHistoryArray = history || [];
+            const aiReply = await this.chatService.generateTextOnlyResponse(message, passedHistoryArray, tenant._id.toString(), conversationId);
+            return {
+                reply: aiReply,
+                conversationId,
+            };
+        }
+        catch (error) {
+            console.error('Public UI Widget Inference pipeline crash:', error);
+            return {
+                reply: "I'm having trouble connecting to my systems array right now. Please try again shortly!",
+                conversationId,
+            };
+        }
     }
 };
 exports.PublicTenantController = PublicTenantController;
@@ -56,10 +105,27 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], PublicTenantController.prototype, "getPublicWidgetConfig", null);
+__decorate([
+    (0, common_1.Post)('initialize-lead'),
+    __param(0, (0, common_1.Body)('tenantSlug')),
+    __param(1, (0, common_1.Body)('conversationId')),
+    __param(2, (0, common_1.Body)('formData')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], PublicTenantController.prototype, "initializeLead", null);
+__decorate([
+    (0, common_1.Post)('message'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PublicTenantController.prototype, "handleIncomingWidgetMessage", null);
 exports.PublicTenantController = PublicTenantController = __decorate([
     (0, common_1.Controller)('public-tenant'),
     __param(0, (0, mongoose_1.InjectModel)(tenant_schema_1.Tenant.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        chat_service_1.ChatService])
 ], PublicTenantController);
 let TenantController = class TenantController {
     tenantModel;
@@ -77,7 +143,7 @@ let TenantController = class TenantController {
         const token = authHeader.split(' ')[1];
         const decoded = this.jwtService.decode(token);
         if (!decoded || !decoded.tenantId || !decoded.sub) {
-            throw new common_1.BadRequestException('Security credential token token fingerprint corrupt.');
+            throw new common_1.BadRequestException('Security credential token fingerprint corrupt.');
         }
         return decoded;
     }
@@ -98,14 +164,17 @@ let TenantController = class TenantController {
                     name: user?.name || 'Test User (No DB Match)',
                     email: user?.email || 'test@gmail.com',
                     role: user?.role || 'admin',
-                }
+                },
             };
         }
         return {
             id: tenant._id,
             name: tenant.name,
             slug: tenant.slug,
-            chatConfig: tenant.chatConfig || {},
+            chatConfig: {
+                ...tenant.chatConfig,
+                leadFormPolicy: tenant.chatConfig?.leadFormPolicy || 'optional',
+            },
             user: {
                 name: user?.name || 'Admin Node',
                 email: user?.email || decoded.email || 'unknown@gmail.com',
@@ -126,6 +195,7 @@ let TenantController = class TenantController {
                 'chatConfig.backgroundColor': chatConfig.backgroundColor,
                 'chatConfig.textColor': chatConfig.textColor,
                 'chatConfig.widgetTitle': chatConfig.widgetTitle,
+                'chatConfig.leadFormPolicy': chatConfig.leadFormPolicy || 'optional',
             },
         }, { new: true })
             .lean()

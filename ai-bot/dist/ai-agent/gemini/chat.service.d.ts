@@ -8,10 +8,14 @@ export declare class ChatService implements OnModuleInit {
     private readonly tenantModel;
     private readonly sessionModel;
     private groq;
-    private redis;
     constructor(sessionsService: SessionsService, tenantModel: Model<Tenant>, sessionModel: Model<ChatSession>);
     onModuleInit(): Promise<void>;
-    generateTextOnlyResponse(userText: string, passedHistory: any[], businessId: string): Promise<string>;
+    recordFormAction(businessId: string, conversationId: string, formData?: {
+        fullName?: string;
+        phone?: string;
+        email?: string;
+    }): Promise<any>;
+    generateTextOnlyResponse(userText: string, passedHistory: any[], businessId: string, conversationId: string): Promise<string>;
     getTenantConfig(tenantId: string): Promise<any>;
     logSessionToDatabase(conversationId: string, history: any[], tenantId: string): Promise<void>;
 }

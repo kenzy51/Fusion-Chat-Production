@@ -72,7 +72,7 @@ let ChatGateway = class ChatGateway {
             client.send(JSON.stringify({ event: 'error', data: 'Missing tenant identifier.' }));
             return;
         }
-        const aiResponse = await this.chatService.generateTextOnlyResponse(data.text, data.history || [], tenantId);
+        const aiResponse = await this.chatService.generateTextOnlyResponse(data.text, data.history || [], tenantId, sessionId);
         client.send(JSON.stringify({
             event: 'ai_response',
             data: aiResponse

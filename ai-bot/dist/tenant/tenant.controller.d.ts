@@ -2,9 +2,11 @@ import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
 import { User } from 'src/user/user.schema';
 import { JwtService } from '@nestjs/jwt';
+import { ChatService } from 'src/ai-agent/gemini/chat.service';
 export declare class PublicTenantController {
     private readonly tenantModel;
-    constructor(tenantModel: Model<Tenant>);
+    private readonly chatService;
+    constructor(tenantModel: Model<Tenant>, chatService: ChatService);
     getPublicWidgetConfig(slug: string): Promise<{
         name: string;
         slug: string;
@@ -15,6 +17,21 @@ export declare class PublicTenantController {
         greeting: string;
         knowledgeBase: string;
         chatPrompt: string;
+        leadFormPolicy: any;
+    }>;
+    initializeLead(tenantSlug: string, conversationId: string, formData?: {
+        fullName?: string;
+        phone?: string;
+        email?: string;
+    }): Promise<any>;
+    handleIncomingWidgetMessage(body: {
+        message: string;
+        slug: string;
+        conversationId: string;
+        history?: any[];
+    }): Promise<{
+        reply: string;
+        conversationId: string;
     }>;
 }
 export declare class TenantController {
@@ -37,7 +54,17 @@ export declare class TenantController {
         id: import("mongoose").Types.ObjectId;
         name: string;
         slug: string;
-        chatConfig: import("src/tenant/tenant.schema").ChatConfig;
+        chatConfig: {
+            leadFormPolicy: any;
+            knowledgeBase: string;
+            chatPrompt: string;
+            greeting: string;
+            primaryColor: string;
+            backgroundColor: string;
+            widgetTitle: string;
+            logoUrl: string;
+            textColor: string;
+        };
         user: {
             name: string;
             email: any;

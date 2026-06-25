@@ -14,6 +14,7 @@ const tenant_controller_1 = require("./tenant.controller");
 const tenant_schema_1 = require("./tenant.schema");
 const user_module_1 = require("../user/user.module");
 const auth_module_1 = require("../auth/auth.module");
+const ai_agent_module_1 = require("../ai-agent/ai-agent.module");
 let TenantModule = class TenantModule {
 };
 exports.TenantModule = TenantModule;
@@ -23,10 +24,11 @@ exports.TenantModule = TenantModule = __decorate([
             mongoose_1.MongooseModule.forFeature([{ name: tenant_schema_1.Tenant.name, schema: tenant_schema_1.TenantSchema }]),
             user_module_1.UserModule,
             auth_module_1.AuthModule,
+            (0, common_1.forwardRef)(() => ai_agent_module_1.AiAgentModule),
         ],
         providers: [tenant_service_1.TenantService],
         controllers: [tenant_controller_1.TenantController, tenant_controller_1.PublicTenantController],
-        exports: [mongoose_1.MongooseModule],
+        exports: [mongoose_1.MongooseModule, tenant_service_1.TenantService],
     })
 ], TenantModule);
 //# sourceMappingURL=tenant.module.js.map

@@ -20,7 +20,7 @@ exports.AiAgentModule = AiAgentModule = __decorate([
     (0, common_1.Module)({
         imports: [
             (0, common_1.forwardRef)(() => session_module_1.SessionsModule),
-            tenant_module_1.TenantModule,
+            (0, common_1.forwardRef)(() => tenant_module_1.TenantModule),
         ],
         providers: [chat_service_1.ChatService, chat_gateway_1.ChatGateway, config_1.ConfigStore],
         exports: [chat_service_1.ChatService, config_1.ConfigStore],

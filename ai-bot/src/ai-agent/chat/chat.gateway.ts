@@ -2,7 +2,6 @@ import {
   SubscribeMessage, 
   WebSocketGateway, 
   OnGatewayConnection,
-  OnGatewayDisconnect
 } from "@nestjs/websockets";
 import { ChatService } from "../gemini/chat.service";
 import * as crypto from 'crypto';
@@ -15,15 +14,11 @@ export class ChatGateway implements OnGatewayConnection {
     client.id = crypto.randomUUID();
     console.log(`📡 New Web Chat Socket Connected: ${client.id}`);
 
-    // We can extract a default test tenant ID, or expect it via query params:
-    // const tenantId = client.handshake?.query?.tenantId; 
     const defaultTestTenantId = "66708b76e1a47b2c93d9ef12"; 
 
-    // Fetch the tenant's profile to get their specific welcome message
     const tenantConfig = await this.chatService.getTenantConfig(defaultTestTenantId);
     const greeting = tenantConfig?.voiceConfig?.greeting || "Hello! How can I help you today?";
 
-    // Send the initial handshake payload with the system greeting
     client.send(JSON.stringify({
       event: 'session_established',
       sessionId: client.id,
@@ -37,6 +32,7 @@ export class ChatGateway implements OnGatewayConnection {
     const data = parsed.data || parsed; 
     
     const tenantId = data.tenantId; 
+    // Extract the persistent conversation session identifier cleanly
     const sessionId = data.sessionId || client.id;
     
     if (!tenantId) {
@@ -44,10 +40,12 @@ export class ChatGateway implements OnGatewayConnection {
       return;
     }
 
+    // 🚀 THE FIX: Passed sessionId into the required 4th parameter position (conversationId)
     const aiResponse = await this.chatService.generateTextOnlyResponse(
       data.text,
       data.history || [],
-      tenantId
+      tenantId,
+      sessionId
     );
 
     client.send(JSON.stringify({

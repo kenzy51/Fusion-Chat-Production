@@ -24,46 +24,53 @@ const mongoose_2 = require("mongoose");
 const tenant_schema_1 = require("../../tenant/tenant.schema");
 const session_schema_1 = require("../../sessions/schemas/session.schema");
 const session_service_1 = require("../../sessions/session.service");
-const ioredis_1 = __importDefault(require("ioredis"));
 let ChatService = class ChatService {
     sessionsService;
     tenantModel;
     sessionModel;
     groq;
-    redis;
     constructor(sessionsService, tenantModel, sessionModel) {
         this.sessionsService = sessionsService;
         this.tenantModel = tenantModel;
         this.sessionModel = sessionModel;
         mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
         this.groq = new groq_sdk_1.default({ apiKey: process.env.GROQ_API_KEY });
-        this.redis = new ioredis_1.default(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
     }
     async onModuleInit() {
-        console.log('🚀 Fusion Chat Engine Activated. Stateless Tenancy Engaged.');
+        console.log('🚀 Fusion Chat Engine Activated. Database Tenancy Bound.');
     }
-    async generateTextOnlyResponse(userText, passedHistory, businessId) {
+    async recordFormAction(businessId, conversationId, formData) {
+        const leadData = formData || {};
+        const status = formData?.fullName && (formData.phone || formData.email) ? 'qualified' : 'anonymous';
+        const currentTenant = await this.tenantModel
+            .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
+            .exec();
+        const tenantSlug = currentTenant ? currentTenant.slug : businessId;
+        return await this.sessionModel.findOneAndUpdate({ sessionId: conversationId }, {
+            $set: {
+                tenantId: currentTenant?._id || businessId,
+                tenantSlug,
+                leadMetadata: {
+                    fullName: leadData.fullName || null,
+                    phone: leadData.phone || null,
+                    email: leadData.email || null,
+                    capturedStatus: status,
+                },
+            },
+        }, { upsert: true, new: true });
+    }
+    async generateTextOnlyResponse(userText, passedHistory, businessId, conversationId) {
         const leanHistory = passedHistory.slice(-10);
         try {
-            const cacheKey = `tenant:${businessId}:config`;
-            let tenantConfigString = await this.redis.get(cacheKey);
-            let currentTenant;
-            if (tenantConfigString) {
-                currentTenant = JSON.parse(tenantConfigString);
+            const currentTenant = await this.tenantModel
+                .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
+                .exec();
+            if (!currentTenant) {
+                return 'System error: Tenant configuration node not found.';
             }
-            else {
-                currentTenant = await this.tenantModel
-                    .findOne({
-                    $or: [{ _id: businessId }, { slug: businessId }],
-                })
-                    .exec();
-                if (!currentTenant) {
-                    return 'System error: Tenant configuration node not found.';
-                }
-                await this.redis.set(cacheKey, JSON.stringify(currentTenant), 'EX', 300);
-            }
-            const dynamicKnowledge = currentTenant.voiceConfig?.knowledgeBase || '';
-            const dynamicSystemChatPrompt = currentTenant.voiceConfig?.chatPrompt || 'You are a helpful assistant.';
+            const dynamicKnowledge = currentTenant.chatConfig?.knowledgeBase || '';
+            const dynamicSystemChatPrompt = currentTenant.chatConfig?.chatPrompt || 'You are a helpful assistant.';
+            const tenantSlug = currentTenant.slug || businessId;
             const response = await this.groq.chat.completions.create({
                 model: 'llama-3.1-8b-instant',
                 messages: [
@@ -76,8 +83,31 @@ let ChatService = class ChatService {
                 ],
                 temperature: 0.5,
             });
-            return (response.choices[0]?.message?.content ||
-                "I'm sorry, I couldn't process that response.");
+            const aiReply = response.choices[0]?.message?.content || "I'm sorry, I couldn't process that response.";
+            await this.sessionModel.findOneAndUpdate({ sessionId: conversationId }, {
+                $setOnInsert: {
+                    tenantId: currentTenant._id,
+                    tenantSlug: tenantSlug,
+                    'leadMetadata.capturedStatus': 'anonymous',
+                    'leadMetadata.fullName': null,
+                    'leadMetadata.phone': null,
+                    'leadMetadata.email': null,
+                    status: 'active',
+                },
+                $push: {
+                    messages: {
+                        $each: [
+                            { role: 'user', content: userText, timestamp: new Date() },
+                            { role: 'assistant', content: aiReply, timestamp: new Date() },
+                        ],
+                    },
+                },
+            }, { upsert: true, new: true });
+            if (userText.toLowerCase().includes('book') || aiReply.includes('/contact')) {
+                const structuralFullHistory = [...passedHistory, { role: 'user', content: userText }, { role: 'assistant', content: aiReply }];
+                this.logSessionToDatabase(conversationId, structuralFullHistory, currentTenant._id.toString()).catch((err) => console.error('Out-of-band transcription trace save stall error:', err));
+            }
+            return aiReply;
         }
         catch (err) {
             console.error('❌ Groq Dynamic Multi-Tenant Chat Error:', err);
@@ -85,15 +115,7 @@ let ChatService = class ChatService {
         }
     }
     async getTenantConfig(tenantId) {
-        const cacheKey = `tenant:${tenantId}:config`;
-        const cached = await this.redis.get(cacheKey);
-        if (cached)
-            return JSON.parse(cached);
-        const tenant = await this.tenantModel.findById(tenantId).exec();
-        if (tenant) {
-            await this.redis.set(cacheKey, JSON.stringify(tenant), 'EX', 300);
-        }
-        return tenant;
+        return await this.tenantModel.findById(tenantId).exec();
     }
     async logSessionToDatabase(conversationId, history, tenantId) {
         try {
@@ -104,7 +126,7 @@ let ChatService = class ChatService {
                     messages: [
                         {
                             role: 'system',
-                            content: 'Summarize this conversation context in one brief sentence.',
+                            content: 'Summarize this conversation context in one brief, professional executive summary sentence.',
                         },
                         {
                             role: 'user',
@@ -122,7 +144,8 @@ let ChatService = class ChatService {
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                 status: 'completed',
             });
-            console.log(`✅ Multi-Tenant Chat Session saved securely for tenant: ${tenantId}`);
+            await this.sessionModel.updateOne({ sessionId: conversationId }, { $set: { aiSummary: summary, isArchived: true, status: 'completed' } });
+            console.log(`✅ Multi-Tenant Chat Session saved and summarized securely for tenant: ${tenantId}`);
         }
         catch (e) {
             console.error('❌ Async Chat Session Save failed:', e.message);
