@@ -107,7 +107,7 @@ export class ChatService implements OnModuleInit {
 
       const aiReply = response.choices[0]?.message?.content || "I'm sorry, I couldn't process that response.";
 
-      // 🎯 UNIFIED MONGO RECORD UPDATE: Appends message turns to the document holding the lead markers
+      // UNIFIED MONGO RECORD UPDATE: Appends message turns to the document holding the lead markers
       await this.sessionModel.findOneAndUpdate(
         { sessionId: conversationId },
         {
@@ -132,7 +132,7 @@ export class ChatService implements OnModuleInit {
         { upsert: true, returnDocument: 'after' },
       );
 
-      // 🚀 FIXED: Keyword constraints removed completely. Runs out-of-band analysis on every conversation turn.
+      // Out-of-band analysis triggers unconditionally on every turn to capture continuous trace flow
       const structuralFullHistory = [
         ...passedHistory, 
         { role: 'user', content: userText }, 

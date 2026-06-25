@@ -18,7 +18,7 @@ export default function StandalonePublicWidgetPage() {
   );
 }
 
-// 🚀 CHAT TRANSCRIPT RICH LAYOUT PARSER
+// CHAT TRANSCRIPT MARKDOWN TEXT ENGINE
 function FormattedMessage({ content, primaryColor }: { content: string; primaryColor: string }) {
   if (!content) return null;
   const lines = content.split("\n");
@@ -78,7 +78,7 @@ function WidgetContent() {
   const [inputMessage, setInputMessage] = useState("");
   const [isBotTyping, setIsBotTyping] = useState(false);
   
-  // 🚀 LEAD GATEWAY MANAGEMENT FLAGS
+  // LEAD DATA STATE CONTAINERS
   const [showFormGate, setShowFormGate] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -90,7 +90,7 @@ function WidgetContent() {
   useEffect(() => {
     if (!slug) return;
 
-    // Pull or track session tokens directly from persistent storage
+    // Ensure session IDs persist across browser resets
     let currentConversationId = localStorage.getItem(`fusion_conv_${slug}`);
     if (!currentConversationId) {
       currentConversationId = crypto.randomUUID();
@@ -108,7 +108,6 @@ function WidgetContent() {
           },
         ]);
 
-        // Evaluate whether the visual lead input card overlay should trigger on-screen
         const savedGateStatus = localStorage.getItem(`fusion_gate_passed_${slug}`);
         if (data.leadFormPolicy && data.leadFormPolicy !== 'disabled' && !savedGateStatus) {
           setShowFormGate(true);
@@ -121,7 +120,6 @@ function WidgetContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isBotTyping]);
 
-  // Handles execution when the customer completes or skips the entrance gateway parameters
   const handleFormSubmit = async (e?: React.FormEvent, isSkipped: boolean = false) => {
     if (e) e.preventDefault();
     if (!slug) return;
@@ -145,9 +143,8 @@ function WidgetContent() {
       localStorage.setItem(`fusion_gate_passed_${slug}`, "true");
       setShowFormGate(false);
     } catch (err) {
-      console.error("Failed to commit lead context state layer data:", err);
-      // Failsafe bypass to protect continuous interaction
-      setShowFormGate(false);
+      console.error("Failed to pass lead state array context over wire:", err);
+      setShowFormGate(false); // Failsafe
     } finally {
       setIsSubmittingForm(false);
     }
@@ -157,8 +154,10 @@ function WidgetContent() {
     e.preventDefault();
     if (!inputMessage.trim() || !slug) return;
 
+    // Extract the exact active browser token parameter string
     const conversationId = localStorage.getItem(`fusion_conv_${slug}`);
     const userMsg = { role: "user", content: inputMessage };
+    
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage("");
     setIsBotTyping(true);
@@ -170,7 +169,7 @@ function WidgetContent() {
         body: JSON.stringify({ 
           message: inputMessage, 
           slug,
-          conversationId,
+          conversationId, // 🚀 Passed explicitly so backend ties transcripts directly to lead data
           history: messages
         }),
       });
@@ -204,7 +203,7 @@ function WidgetContent() {
       style={{ backgroundColor: config.backgroundColor || "#0a0a0a" }}
       className="w-screen h-screen flex flex-col overflow-hidden font-sans antialiased relative"
     >
-      {/* 🔒 STRUCTURAL FORM GATE LAYER OVERLAY */}
+      {/* VERIFICATION FORM GATE OVERLAY */}
       {showFormGate && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-xl z-50 flex items-center justify-center p-6 transition-all duration-500 animate-fade-in">
           <div className="w-full max-w-[400px] bg-zinc-900/90 border border-white/5 p-6 rounded-[2.5rem] shadow-2xl space-y-5">
@@ -295,7 +294,7 @@ function WidgetContent() {
         </div>
       </div>
 
-      {/* TRANSCRIPT CONTEXT WINDOW TRACK */}
+      {/* CHAT BUBBLES CONTAINER TRACK */}
       <div className="flex-1 p-4 overflow-y-auto space-y-4 scrollbar-none bg-black/10">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -329,7 +328,7 @@ function WidgetContent() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ACTIONS SUBMISSION FOOTER CONTAINER */}
+      {/* FOOTER MESSAGE INPUT BOX */}
       <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-white/[0.01] flex gap-3">
         <input
           type="text"
