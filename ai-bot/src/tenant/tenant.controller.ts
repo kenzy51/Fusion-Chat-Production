@@ -1,3 +1,4 @@
+// backend/src/chat/public-tenant.controller.ts
 import {
   Body,
   Controller,
@@ -6,6 +7,7 @@ import {
   Post,
   Headers,
   Param,
+  Query,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -20,7 +22,7 @@ import { ChatService } from 'src/ai-agent/gemini/chat.service';
 export class PublicTenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
-    private readonly chatService: ChatService, // 🎯 Inject your existing ChatService here!
+    private readonly chatService: ChatService,
   ) {}
 
   @Get(':slug/widget-config')
@@ -29,7 +31,7 @@ export class PublicTenantController {
       throw new BadRequestException('Workspace tracking parameters invalid.');
     }
 
-    let tenant = await this.tenantModel
+    const tenant = await this.tenantModel
       .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
       .lean()
       .exec();
@@ -45,6 +47,7 @@ export class PublicTenantController {
         greeting: 'Hello! Setting up configurations. How can I help you today?',
         knowledgeBase: '',
         chatPrompt: '',
+        leadFormPolicy: 'optional', // Default fail-safe fallback metric configuration rule
       };
     }
 
@@ -58,21 +61,38 @@ export class PublicTenantController {
       greeting: tenant.chatConfig?.greeting || 'Hello!',
       knowledgeBase: tenant.chatConfig?.knowledgeBase || '',
       chatPrompt: tenant.chatConfig?.chatPrompt || '',
+      // @ts-ignore
+      leadFormPolicy: tenant.chatConfig?.leadFormPolicy || 'optional',
     };
   }
+
+  /**
+   * 🚀 NEW ENDPOINT: Initializes and records form capture configurations (Mandatory / Optional Skips)
+   */
+  @Post('initialize-lead')
+  async initializeLead(
+    @Body('tenantSlug') tenantSlug: string,
+    @Body('conversationId') conversationId: string,
+    @Body('formData') formData?: { fullName?: string; phone?: string; email?: string },
+  ) {
+    if (!tenantSlug || !conversationId) {
+      throw new BadRequestException('Initialization transaction rejected: Missing critical tracking parameters.');
+    }
+    return await this.chatService.recordFormAction(tenantSlug, conversationId, formData);
+  }
+
   @Post('message')
   async handleIncomingWidgetMessage(
-    @Body() body: { message: string; slug: string },
+    @Body() body: { message: string; slug: string; conversationId: string; history?: any[] },
   ) {
-    const { message, slug } = body;
+    const { message, slug, conversationId, history } = body;
 
-    if (!slug) {
+    if (!slug || !conversationId) {
       throw new BadRequestException(
-        'Cannot initiate matrix lookup: Missing tenant slug mapping.',
+        'Cannot initiate matrix lookup: Missing tenant validation tokens.',
       );
     }
 
-    // 1. Locate the tenant profile dynamically by their unique script slug identifier
     const tenant = await this.tenantModel
       .findOne({ slug: { $regex: new RegExp(`^${slug.trim()}$`, 'i') } })
       .lean()
@@ -85,26 +105,30 @@ export class PublicTenantController {
     }
 
     try {
+      const passedHistoryArray = history || [];
+      
       const aiReply = await this.chatService.generateTextOnlyResponse(
         message,
-        [], // Pass history array here if your front-end state expands to store it
-        tenant._id.toString(), // Passes the validated business ID node directly to trigger your Redis cache logic
+        passedHistoryArray,
+        tenant._id.toString(),
+        conversationId,
       );
 
       return {
-        reply: aiReply, // 🎯 Real answer processed straight out of Groq via your ChatService!
+        reply: aiReply,
+        conversationId,
       };
     } catch (error) {
       console.error('Public UI Widget Inference pipeline crash:', error);
       return {
-        reply:
-          "I'm having trouble connecting to my systems array right now. Please try again shortly!",
+        reply: "I'm having trouble connecting to my systems array right now. Please try again shortly!",
+        conversationId,
       };
     }
   }
 }
 
-@Controller('tenant') // 🔒 PROTECTED OWNER MANAGEMENT LAYOUT NODES
+@Controller('tenant')
 export class TenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
@@ -154,7 +178,11 @@ export class TenantController {
       id: tenant._id,
       name: tenant.name,
       slug: tenant.slug,
-      chatConfig: tenant.chatConfig || {},
+      chatConfig: {
+        ...tenant.chatConfig,
+        // @ts-ignore
+        leadFormPolicy: tenant.chatConfig?.leadFormPolicy || 'optional',
+      },
       user: {
         name: user?.name || 'Admin Node',
         email: user?.email || decoded.email || 'unknown@gmail.com',
@@ -183,6 +211,7 @@ export class TenantController {
             'chatConfig.backgroundColor': chatConfig.backgroundColor,
             'chatConfig.textColor': chatConfig.textColor,
             'chatConfig.widgetTitle': chatConfig.widgetTitle,
+            'chatConfig.leadFormPolicy': chatConfig.leadFormPolicy || 'optional', // Saves custom policy state cleanly
           },
         },
         { new: true },
