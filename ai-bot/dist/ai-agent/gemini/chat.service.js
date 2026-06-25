@@ -42,13 +42,15 @@ let ChatService = class ChatService {
     async recordFormAction(businessId, conversationId, formData) {
         const leadData = formData || {};
         const status = formData?.fullName && (formData.phone || formData.email) ? 'qualified' : 'anonymous';
-        const currentTenant = await this.tenantModel
-            .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
-            .exec();
+        const isObjectId = mongoose_2.Types.ObjectId.isValid(businessId);
+        const tenantFilter = isObjectId
+            ? { _id: businessId }
+            : { slug: { $regex: new RegExp(`^${businessId.trim()}$`, 'i') } };
+        const currentTenant = await this.tenantModel.findOne(tenantFilter).exec();
         const tenantSlug = currentTenant ? currentTenant.slug : businessId;
         return await this.sessionModel.findOneAndUpdate({ sessionId: conversationId }, {
             $set: {
-                tenantId: currentTenant?._id || businessId,
+                tenantId: currentTenant?._id || null,
                 tenantSlug,
                 leadMetadata: {
                     fullName: leadData.fullName || null,
@@ -57,14 +59,16 @@ let ChatService = class ChatService {
                     capturedStatus: status,
                 },
             },
-        }, { upsert: true, new: true });
+        }, { upsert: true, returnDocument: 'after' });
     }
     async generateTextOnlyResponse(userText, passedHistory, businessId, conversationId) {
         const leanHistory = passedHistory.slice(-10);
         try {
-            const currentTenant = await this.tenantModel
-                .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
-                .exec();
+            const isObjectId = mongoose_2.Types.ObjectId.isValid(businessId);
+            const tenantFilter = isObjectId
+                ? { _id: businessId }
+                : { slug: { $regex: new RegExp(`^${businessId.trim()}$`, 'i') } };
+            const currentTenant = await this.tenantModel.findOne(tenantFilter).exec();
             if (!currentTenant) {
                 return 'System error: Tenant configuration node not found.';
             }
@@ -102,9 +106,13 @@ let ChatService = class ChatService {
                         ],
                     },
                 },
-            }, { upsert: true, new: true });
+            }, { upsert: true, returnDocument: 'after' });
             if (userText.toLowerCase().includes('book') || aiReply.includes('/contact')) {
-                const structuralFullHistory = [...passedHistory, { role: 'user', content: userText }, { role: 'assistant', content: aiReply }];
+                const structuralFullHistory = [
+                    ...passedHistory,
+                    { role: 'user', content: userText },
+                    { role: 'assistant', content: aiReply }
+                ];
                 this.logSessionToDatabase(conversationId, structuralFullHistory, currentTenant._id.toString()).catch((err) => console.error('Out-of-band transcription trace save stall error:', err));
             }
             return aiReply;
@@ -115,7 +123,9 @@ let ChatService = class ChatService {
         }
     }
     async getTenantConfig(tenantId) {
-        return await this.tenantModel.findById(tenantId).exec();
+        const isObjectId = mongoose_2.Types.ObjectId.isValid(tenantId);
+        const filter = isObjectId ? { _id: tenantId } : { slug: tenantId };
+        return await this.tenantModel.findOne(filter).exec();
     }
     async logSessionToDatabase(conversationId, history, tenantId) {
         try {
@@ -126,7 +136,7 @@ let ChatService = class ChatService {
                     messages: [
                         {
                             role: 'system',
-                            content: 'Summarize this conversation context in one brief, professional executive summary sentence.',
+                            content: 'Summarize this conversation context in one brief professional executive summary sentence.',
                         },
                         {
                             role: 'user',

@@ -1,9 +1,9 @@
-// backend/src/chat/chat.service.ts
-import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
+// backend/src/ai-agent/gemini/chat.service.ts
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import Groq from 'groq-sdk';
 import sgMail from '@sendgrid/mail';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose'; // 🚀 FIXED: Imported "Types" to handle structural ObjectId validation checks
 import { Tenant } from 'src/tenant/tenant.schema';
 import { ChatSession } from 'src/sessions/schemas/session.schema';
 import { SessionsService } from 'src/sessions/session.service';
@@ -27,30 +27,29 @@ export class ChatService implements OnModuleInit {
 
   /**
    * 🚀 STEP 1: Process User Form Submission (Explicit or Skipped)
-   * This handles creating the session placeholder or merging explicit lead data fields.
    */
   async recordFormAction(
     businessId: string,
     conversationId: string,
     formData?: { fullName?: string; phone?: string; email?: string },
   ): Promise<any> {
-    // Determine status variant tracking parameters based on data fields presence
     const leadData = formData || {};
     const status = formData?.fullName && (formData.phone || formData.email) ? 'qualified' : 'anonymous';
 
-    // Atomically find the current tenant record to bind correctly
-    const currentTenant = await this.tenantModel
-      .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
-      .exec();
+    // 🎯 FIXED: Cast-proof lookup boundary routing
+    const isObjectId = Types.ObjectId.isValid(businessId);
+    const tenantFilter = isObjectId 
+      ? { _id: businessId } 
+      : { slug: { $regex: new RegExp(`^${businessId.trim()}$`, 'i') } };
 
+    const currentTenant = await this.tenantModel.findOne(tenantFilter).exec();
     const tenantSlug = currentTenant ? currentTenant.slug : businessId;
 
-    // Persist or merge profile context fields cleanly within our active collections
     return await this.sessionModel.findOneAndUpdate(
       { sessionId: conversationId },
       {
         $set: {
-          tenantId: currentTenant?._id || businessId,
+          tenantId: currentTenant?._id || null,
           tenantSlug,
           leadMetadata: {
             fullName: leadData.fullName || null,
@@ -60,7 +59,7 @@ export class ChatService implements OnModuleInit {
           },
         },
       },
-      { upsert: true, new: true },
+      { upsert: true, returnDocument: 'after' }, // 🚀 FIXED: Cleans up deprecated 'new: true' warning arrays
     );
   }
 
@@ -71,15 +70,19 @@ export class ChatService implements OnModuleInit {
     userText: string,
     passedHistory: any[],
     businessId: string,
-    conversationId: string, // 💥 CRITICAL: Map your persistent session token identifier over the wire
+    conversationId: string,
   ): Promise<string> {
     const leanHistory = passedHistory.slice(-10);
 
     try {
-      // Direct lookups inside your MongoDB multi-tenant metrics fields
-      const currentTenant = await this.tenantModel
-        .findOne({ $or: [{ _id: businessId }, { slug: businessId }] })
-        .exec();
+      // 🎯 CRITICAL FIX: Evaluate if the businessId is a valid 24-char Hex ObjectId before throwing it at the database filter
+      const isObjectId = Types.ObjectId.isValid(businessId);
+      
+      const tenantFilter = isObjectId 
+        ? { _id: businessId } 
+        : { slug: { $regex: new RegExp(`^${businessId.trim()}$`, 'i') } };
+
+      const currentTenant = await this.tenantModel.findOne(tenantFilter).exec();
 
       if (!currentTenant) {
         return 'System error: Tenant configuration node not found.';
@@ -89,7 +92,7 @@ export class ChatService implements OnModuleInit {
       const dynamicSystemChatPrompt = currentTenant.chatConfig?.chatPrompt || 'You are a helpful assistant.';
       const tenantSlug = currentTenant.slug || businessId;
 
-      // Request text completion parameters via Groq Llama Gateway
+      // Get precision completion from Groq
       const response = await this.groq.chat.completions.create({
         model: 'llama-3.1-8b-instant',
         messages: [
@@ -105,7 +108,7 @@ export class ChatService implements OnModuleInit {
 
       const aiReply = response.choices[0]?.message?.content || "I'm sorry, I couldn't process that response.";
 
-      // 💥 SYNC PERSISTENT COLLECTION TIER: Update text logs without creating ghost session gaps
+      // Sync persistent transaction data seamlessly
       await this.sessionModel.findOneAndUpdate(
         { sessionId: conversationId },
         {
@@ -127,12 +130,16 @@ export class ChatService implements OnModuleInit {
             },
           },
         },
-        { upsert: true, new: true },
+        { upsert: true, returnDocument: 'after' }, // 🚀 FIXED: Replaced deprecation metrics markers
       );
 
-      // Trigger asynchronous background analysis if specific conversion keywords drop
+      // Trigger asynchronous background analysis if conversion signatures match
       if (userText.toLowerCase().includes('book') || aiReply.includes('/contact')) {
-        const structuralFullHistory = [...passedHistory, { role: 'user', content: userText }, { role: 'assistant', content: aiReply }];
+        const structuralFullHistory = [
+          ...passedHistory, 
+          { role: 'user', content: userText }, 
+          { role: 'assistant', content: aiReply }
+        ];
         this.logSessionToDatabase(conversationId, structuralFullHistory, currentTenant._id.toString()).catch((err) =>
           console.error('Out-of-band transcription trace save stall error:', err),
         );
@@ -146,11 +153,13 @@ export class ChatService implements OnModuleInit {
   }
 
   async getTenantConfig(tenantId: string): Promise<any> {
-    return await this.tenantModel.findById(tenantId).exec();
+    const isObjectId = Types.ObjectId.isValid(tenantId);
+    const filter = isObjectId ? { _id: tenantId } : { slug: tenantId };
+    return await this.tenantModel.findOne(filter).exec();
   }
 
   /**
-   * Logs summary analytics out-of-band cleanly without interrupting active user chat windows
+   * Logs conversational analytics asynchronously back to MongoDB when a session completes
    */
   async logSessionToDatabase(
     conversationId: string,
@@ -166,7 +175,7 @@ export class ChatService implements OnModuleInit {
           messages: [
             {
               role: 'system',
-              content: 'Summarize this conversation context in one brief, professional executive summary sentence.',
+              content: 'Summarize this conversation context in one brief professional executive summary sentence.',
             },
             {
               role: 'user',
@@ -177,7 +186,6 @@ export class ChatService implements OnModuleInit {
         summary = sumResp.choices[0]?.message?.content || summary;
       }
 
-      // Finalize the compiled thread records persistently via the session controller
       await this.sessionsService.saveSession({
         tenantId,
         sessionId: conversationId,
@@ -187,7 +195,6 @@ export class ChatService implements OnModuleInit {
         status: 'completed',
       });
 
-      // Update the active model archive flag to avoid double summarizations later
       await this.sessionModel.updateOne(
         { sessionId: conversationId },
         { $set: { aiSummary: summary, isArchived: true, status: 'completed' } }
