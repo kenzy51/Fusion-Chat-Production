@@ -9,26 +9,35 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TenantModule = void 0;
 const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
-const tenant_service_1 = require("./tenant.service");
 const tenant_controller_1 = require("./tenant.controller");
+const tenant_service_1 = require("./tenant.service");
+const chat_service_1 = require("../ai-agent/gemini/chat.service");
+const session_service_1 = require("../sessions/session.service");
 const tenant_schema_1 = require("./tenant.schema");
-const user_module_1 = require("../user/user.module");
-const auth_module_1 = require("../auth/auth.module");
-const ai_agent_module_1 = require("../ai-agent/ai-agent.module");
+const user_schema_1 = require("../user/user.schema");
+const session_schema_1 = require("../sessions/schemas/session.schema");
 let TenantModule = class TenantModule {
 };
 exports.TenantModule = TenantModule;
 exports.TenantModule = TenantModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: tenant_schema_1.Tenant.name, schema: tenant_schema_1.TenantSchema }]),
-            user_module_1.UserModule,
-            auth_module_1.AuthModule,
-            (0, common_1.forwardRef)(() => ai_agent_module_1.AiAgentModule),
+            mongoose_1.MongooseModule.forFeature([
+                { name: tenant_schema_1.Tenant.name, schema: tenant_schema_1.TenantSchema },
+                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
+                { name: session_schema_1.ChatSession.name, schema: session_schema_1.ChatSessionSchema },
+            ]),
         ],
-        providers: [tenant_service_1.TenantService],
-        controllers: [tenant_controller_1.TenantController, tenant_controller_1.PublicTenantController],
-        exports: [mongoose_1.MongooseModule, tenant_service_1.TenantService],
+        controllers: [
+            tenant_controller_1.TenantController,
+            tenant_controller_1.PublicTenantController,
+        ],
+        providers: [
+            tenant_service_1.TenantService,
+            chat_service_1.ChatService,
+            session_service_1.SessionsService,
+        ],
+        exports: [mongoose_1.MongooseModule],
     })
 ], TenantModule);
 //# sourceMappingURL=tenant.module.js.map

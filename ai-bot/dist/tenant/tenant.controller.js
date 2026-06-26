@@ -18,6 +18,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const tenant_schema_1 = require("./tenant.schema");
 const user_schema_1 = require("../user/user.schema");
+const session_schema_1 = require("../sessions/schemas/session.schema");
 const jwt_1 = require("@nestjs/jwt");
 const chat_service_1 = require("../ai-agent/gemini/chat.service");
 let PublicTenantController = class PublicTenantController {
@@ -130,10 +131,12 @@ exports.PublicTenantController = PublicTenantController = __decorate([
 let TenantController = class TenantController {
     tenantModel;
     userModel;
+    sessionModel;
     jwtService;
-    constructor(tenantModel, userModel, jwtService) {
+    constructor(tenantModel, userModel, sessionModel, jwtService) {
         this.tenantModel = tenantModel;
         this.userModel = userModel;
+        this.sessionModel = sessionModel;
         this.jwtService = jwtService;
     }
     decodeHeaderToken(authHeader) {
@@ -206,6 +209,30 @@ let TenantController = class TenantController {
             chatConfig: updatedTenant.chatConfig,
         };
     }
+    async getTenantConversations(authHeader, status) {
+        const decoded = this.decodeHeaderToken(authHeader);
+        const adminTenantId = decoded.tenantId;
+        const queryFilter = { tenantId: adminTenantId };
+        if (status) {
+            queryFilter.status = status;
+        }
+        try {
+            const conversations = await this.sessionModel
+                .find(queryFilter)
+                .sort({ createdAt: -1 })
+                .lean()
+                .exec();
+            return {
+                success: true,
+                count: conversations.length,
+                data: conversations,
+            };
+        }
+        catch (error) {
+            console.error(`❌ Failed to fetch isolated conversation stream for tenant ${adminTenantId}:`, error);
+            throw new common_1.BadRequestException('Could not retrieve conversation logs from system arrays.');
+        }
+    }
 };
 exports.TenantController = TenantController;
 __decorate([
@@ -223,11 +250,21 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], TenantController.prototype, "updateConfig", null);
+__decorate([
+    (0, common_1.Get)('conversations'),
+    __param(0, (0, common_1.Headers)('authorization')),
+    __param(1, (0, common_1.Query)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], TenantController.prototype, "getTenantConversations", null);
 exports.TenantController = TenantController = __decorate([
     (0, common_1.Controller)('tenant'),
     __param(0, (0, mongoose_1.InjectModel)(tenant_schema_1.Tenant.name)),
     __param(1, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
+    __param(2, (0, mongoose_1.InjectModel)(session_schema_1.ChatSession.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
+        mongoose_2.Model,
         mongoose_2.Model,
         jwt_1.JwtService])
 ], TenantController);

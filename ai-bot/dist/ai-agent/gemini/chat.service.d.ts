@@ -1,14 +1,14 @@
 import { OnModuleInit } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
-import { ChatSession } from 'src/sessions/schemas/session.schema';
+import { ChatSession as LocalSessionModel } from 'src/sessions/schemas/session.schema';
 import { SessionsService } from 'src/sessions/session.service';
 export declare class ChatService implements OnModuleInit {
     private readonly sessionsService;
     private readonly tenantModel;
     private readonly sessionModel;
     private groq;
-    constructor(sessionsService: SessionsService, tenantModel: Model<Tenant>, sessionModel: Model<ChatSession>);
+    constructor(sessionsService: SessionsService, tenantModel: Model<Tenant>, sessionModel: Model<LocalSessionModel>);
     onModuleInit(): Promise<void>;
     recordFormAction(businessId: string, conversationId: string, formData?: {
         fullName?: string;

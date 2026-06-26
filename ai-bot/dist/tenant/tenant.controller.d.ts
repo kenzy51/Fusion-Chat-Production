@@ -1,6 +1,7 @@
 import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
 import { User } from 'src/user/user.schema';
+import { ChatSession } from 'src/sessions/schemas/session.schema';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from 'src/ai-agent/gemini/chat.service';
 export declare class PublicTenantController {
@@ -37,8 +38,9 @@ export declare class PublicTenantController {
 export declare class TenantController {
     private readonly tenantModel;
     private readonly userModel;
+    private readonly sessionModel;
     private readonly jwtService;
-    constructor(tenantModel: Model<Tenant>, userModel: Model<User>, jwtService: JwtService);
+    constructor(tenantModel: Model<Tenant>, userModel: Model<User>, sessionModel: Model<ChatSession>, jwtService: JwtService);
     private decodeHeaderToken;
     getCombinedProfile(authHeader: string): Promise<{
         id: string | import("mongoose").Types.ObjectId;
@@ -75,5 +77,14 @@ export declare class TenantController {
         success: boolean;
         message: string;
         chatConfig: import("src/tenant/tenant.schema").ChatConfig;
+    }>;
+    getTenantConversations(authHeader: string, status?: string): Promise<{
+        success: boolean;
+        count: number;
+        data: (ChatSession & {
+            _id: import("mongoose").Types.ObjectId;
+        } & {
+            __v: number;
+        })[];
     }>;
 }

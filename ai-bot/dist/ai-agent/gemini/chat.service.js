@@ -52,12 +52,13 @@ let ChatService = class ChatService {
             $set: {
                 tenantId: currentTenant?._id || null,
                 tenantSlug,
-                leadMetadata: {
-                    fullName: leadData.fullName || null,
-                    phone: leadData.phone || null,
-                    email: leadData.email || null,
-                    capturedStatus: status,
-                },
+                'leadMetadata.fullName': leadData.fullName || null,
+                'leadMetadata.phone': leadData.phone || null,
+                'leadMetadata.email': leadData.email || null,
+                'leadMetadata.capturedStatus': status,
+                fullName: leadData.fullName || null,
+                phone: leadData.phone || null,
+                email: leadData.email || null,
             },
         }, { upsert: true, returnDocument: 'after' });
     }
@@ -92,11 +93,14 @@ let ChatService = class ChatService {
                 $setOnInsert: {
                     tenantId: currentTenant._id,
                     tenantSlug: tenantSlug,
-                    'leadMetadata.capturedStatus': 'anonymous',
+                    status: 'active',
                     'leadMetadata.fullName': null,
                     'leadMetadata.phone': null,
                     'leadMetadata.email': null,
-                    status: 'active',
+                    'leadMetadata.capturedStatus': 'anonymous',
+                    fullName: null,
+                    phone: null,
+                    email: null,
                 },
                 $push: {
                     messages: {
@@ -107,14 +111,12 @@ let ChatService = class ChatService {
                     },
                 },
             }, { upsert: true, returnDocument: 'after' });
-            if (userText.toLowerCase().includes('book') || aiReply.includes('/contact')) {
-                const structuralFullHistory = [
-                    ...passedHistory,
-                    { role: 'user', content: userText },
-                    { role: 'assistant', content: aiReply }
-                ];
-                this.logSessionToDatabase(conversationId, structuralFullHistory, currentTenant._id.toString()).catch((err) => console.error('Out-of-band transcription trace save stall error:', err));
-            }
+            const structuralFullHistory = [
+                ...passedHistory,
+                { role: 'user', content: userText },
+                { role: 'assistant', content: aiReply }
+            ];
+            this.logSessionToDatabase(conversationId, structuralFullHistory, currentTenant._id.toString()).catch((err) => console.error('Out-of-band transcription trace save stall error:', err));
             return aiReply;
         }
         catch (err) {
@@ -146,6 +148,13 @@ let ChatService = class ChatService {
                 });
                 summary = sumResp.choices[0]?.message?.content || summary;
             }
+            const activeSessionDoc = await this.sessionModel.findOne({ sessionId: conversationId }).exec();
+            const extractedLeadMetadata = activeSessionDoc?.leadMetadata || {
+                fullName: null,
+                phone: null,
+                email: null,
+                capturedStatus: 'anonymous'
+            };
             await this.sessionsService.saveSession({
                 tenantId,
                 sessionId: conversationId,
@@ -153,6 +162,15 @@ let ChatService = class ChatService {
                 summary,
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                 status: 'completed',
+                leadMetadata: {
+                    fullName: extractedLeadMetadata.fullName || activeSessionDoc?.fullName || null,
+                    phone: extractedLeadMetadata.phone || activeSessionDoc?.phone || null,
+                    email: extractedLeadMetadata.email || activeSessionDoc?.email || null,
+                    capturedStatus: extractedLeadMetadata.capturedStatus || 'anonymous'
+                },
+                fullName: extractedLeadMetadata.fullName || activeSessionDoc?.fullName || null,
+                phone: extractedLeadMetadata.phone || activeSessionDoc?.phone || null,
+                email: extractedLeadMetadata.email || activeSessionDoc?.email || null,
             });
             await this.sessionModel.updateOne({ sessionId: conversationId }, { $set: { aiSummary: summary, isArchived: true, status: 'completed' } });
             console.log(`✅ Multi-Tenant Chat Session saved and summarized securely for tenant: ${tenantId}`);

@@ -11,67 +11,70 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatSessionSchema = exports.ChatSession = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
-const mongoose_2 = require("mongoose");
-let ChatSession = class ChatSession extends mongoose_2.Document {
+let ChatSession = class ChatSession {
     tenantId;
     sessionId;
     endUserIp;
-    endUserName;
-    endUserEmail;
     summary;
     transcript;
     status;
-    metadata;
-    isFlagged;
+    fullName;
+    phone;
+    email;
+    leadMetadata;
 };
 exports.ChatSession = ChatSession;
 __decorate([
-    (0, mongoose_1.Prop)({
-        type: mongoose_2.Schema.Types.ObjectId,
-        ref: 'Tenant',
-        required: true,
-        index: true,
-    }),
+    (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "tenantId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, index: true }),
+    (0, mongoose_1.Prop)({ required: true, unique: true }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "sessionId", void 0);
 __decorate([
-    (0, mongoose_1.Prop)(),
+    (0, mongoose_1.Prop)({ default: 'Web Chat End User' }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "endUserIp", void 0);
 __decorate([
-    (0, mongoose_1.Prop)(),
-    __metadata("design:type", String)
-], ChatSession.prototype, "endUserName", void 0);
-__decorate([
-    (0, mongoose_1.Prop)(),
-    __metadata("design:type", String)
-], ChatSession.prototype, "endUserEmail", void 0);
-__decorate([
-    (0, mongoose_1.Prop)(),
+    (0, mongoose_1.Prop)({ default: '' }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "summary", void 0);
 __decorate([
-    (0, mongoose_1.Prop)(),
+    (0, mongoose_1.Prop)({ default: '' }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "transcript", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ enum: ['active', 'completed', 'abandoned', 'human_escalated'], default: 'active' }),
+    (0, mongoose_1.Prop)({ default: 'active' }),
     __metadata("design:type", String)
 ], ChatSession.prototype, "status", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object }),
+    (0, mongoose_1.Prop)({ type: String, default: null }),
     __metadata("design:type", Object)
-], ChatSession.prototype, "metadata", void 0);
+], ChatSession.prototype, "fullName", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ default: false }),
-    __metadata("design:type", Boolean)
-], ChatSession.prototype, "isFlagged", void 0);
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", Object)
+], ChatSession.prototype, "phone", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", Object)
+], ChatSession.prototype, "email", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            fullName: { type: String, default: null },
+            phone: { type: String, default: null },
+            email: { type: String, default: null },
+            capturedStatus: { type: String, default: 'anonymous' }
+        },
+        _id: false,
+        default: { fullName: null, phone: null, email: null, capturedStatus: 'anonymous' }
+    }),
+    __metadata("design:type", Object)
+], ChatSession.prototype, "leadMetadata", void 0);
 exports.ChatSession = ChatSession = __decorate([
-    (0, mongoose_1.Schema)({ timestamps: true })
+    (0, mongoose_1.Schema)({ collection: 'sessions', timestamps: true })
 ], ChatSession);
 exports.ChatSessionSchema = mongoose_1.SchemaFactory.createForClass(ChatSession);
 //# sourceMappingURL=session.schema.js.map
