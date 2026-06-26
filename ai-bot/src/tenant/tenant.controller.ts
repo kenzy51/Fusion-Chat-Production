@@ -1,4 +1,4 @@
-// backend/src/chat/public-tenant.controller.ts
+// backend/src/tenant/tenant.controller.ts
 import {
   Body,
   Controller,
@@ -15,6 +15,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Tenant } from 'src/tenant/tenant.schema';
 import { User } from 'src/user/user.schema';
+import { ChatSession } from 'src/sessions/schemas/session.schema'; // 🚀 FIXED: Imported your ChatSession Schema
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from 'src/ai-agent/gemini/chat.service';
 
@@ -47,7 +48,7 @@ export class PublicTenantController {
         greeting: 'Hello! Setting up configurations. How can I help you today?',
         knowledgeBase: '',
         chatPrompt: '',
-        leadFormPolicy: 'optional', // Default fail-safe fallback metric configuration rule
+        leadFormPolicy: 'optional',
       };
     }
 
@@ -133,6 +134,7 @@ export class TenantController {
   constructor(
     @InjectModel(Tenant.name) private readonly tenantModel: Model<Tenant>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(ChatSession.name) private readonly sessionModel: Model<ChatSession>, // 🚀 FIXED: Injected the missing session model here!
     private readonly jwtService: JwtService,
   ) {}
 
@@ -211,7 +213,7 @@ export class TenantController {
             'chatConfig.backgroundColor': chatConfig.backgroundColor,
             'chatConfig.textColor': chatConfig.textColor,
             'chatConfig.widgetTitle': chatConfig.widgetTitle,
-            'chatConfig.leadFormPolicy': chatConfig.leadFormPolicy || 'optional', // Saves custom policy state cleanly
+            'chatConfig.leadFormPolicy': chatConfig.leadFormPolicy || 'optional',
           },
         },
         { new: true },
@@ -225,5 +227,40 @@ export class TenantController {
       // @ts-ignore
       chatConfig: updatedTenant.chatConfig,
     };
+  }
+
+  /**
+   * 🚀 SECURE ADMINISTRATIVE VIEW STREAM
+   */
+  @Get('conversations')
+  async getTenantConversations(
+    @Headers('authorization') authHeader: string,
+    @Query('status') status?: string,
+  ) {
+    const decoded = this.decodeHeaderToken(authHeader);
+    const adminTenantId = decoded.tenantId;
+
+    const queryFilter: any = { tenantId: adminTenantId };
+    
+    if (status) {
+      queryFilter.status = status;
+    }
+
+    try {
+      const conversations = await this.sessionModel
+        .find(queryFilter)
+        .sort({ createdAt: -1 })
+        .lean()
+        .exec();
+
+      return {
+        success: true,
+        count: conversations.length,
+        data: conversations,
+      };
+    } catch (error) {
+      console.error(`❌ Failed to fetch isolated conversation stream for tenant ${adminTenantId}:`, error);
+      throw new BadRequestException('Could not retrieve conversation logs from system arrays.');
+    }
   }
 }
