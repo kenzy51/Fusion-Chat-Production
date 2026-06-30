@@ -2,13 +2,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { MessageSquare, FileText, ChevronLeft, ChevronRight, Cpu, LogOut } from "lucide-react";
+import {  ChevronLeft, ChevronRight, Cpu, LogOut,MessageCircle  } from "lucide-react";
 import { BASE_URL } from "@/app/login/page";
 
 const menuItems = [
-  { name: "Dashboard", icon: FileText, href: "/" },
-  // { name: "Chats", icon: MessageSquare, href: "/chats" },
   { name: "Bot Config", icon: Cpu, href: "/config" }, 
+  { name: "Conversations", icon: MessageCircle, href: "/conversations" }, 
 ];
 
 export function Sidebar() {
