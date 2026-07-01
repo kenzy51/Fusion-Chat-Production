@@ -8,6 +8,63 @@ export default function TenantConversationsDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 💬 Parse a raw transcript string into structured chat turns so we can
+  // render them as a phone-style conversation. Handles "User:"/"Assistant:"
+  // style speaker prefixes as well as already-structured arrays.
+  type ChatTurn = { role: "user" | "assistant"; content: string };
+
+  const ASSISTANT_LABELS = ["assistant", "ai", "bot", "agent", "fusion"];
+
+  const parseTranscript = (raw: any): ChatTurn[] => {
+    if (!raw) return [];
+
+    // Already structured as an array of message objects.
+    if (Array.isArray(raw)) {
+      return raw
+        .map((m) => {
+          const role = String(m.role || m.from || m.sender || "")
+            .toLowerCase()
+            .trim();
+          const content = String(m.content ?? m.text ?? m.message ?? "").trim();
+          if (!content) return null;
+          const isAssistant = ASSISTANT_LABELS.some((l) => role.includes(l));
+          return { role: isAssistant ? "assistant" : "user", content };
+        })
+        .filter(Boolean) as ChatTurn[];
+    }
+
+    const text = String(raw);
+    const speakerRegex = /^\s*([A-Za-z][\w .'-]{0,24})\s*[:：]\s*/;
+    const turns: ChatTurn[] = [];
+
+    text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .forEach((line) => {
+        if (!line) return;
+        const match = line.match(speakerRegex);
+        if (match) {
+          const speaker = match[1].toLowerCase();
+          const content = line.slice(match[0].length).trim();
+          const isAssistant = ASSISTANT_LABELS.some((l) =>
+            speaker.includes(l),
+          );
+          turns.push({
+            role: isAssistant ? "assistant" : "user",
+            content,
+          });
+        } else if (turns.length > 0) {
+          // Continuation of the previous speaker's message.
+          turns[turns.length - 1].content += `\n${line}`;
+        } else {
+          // Leading text with no speaker — assume it's the user.
+          turns.push({ role: "user", content: line });
+        }
+      });
+
+    return turns.filter((t) => t.content.trim().length > 0);
+  };
+
   // 🎯 HELPER FUNCTION: Safely extracts a cookie value by its key name string
   const getCookie = (name: string): string | null => {
     if (typeof document === "undefined") return null;
@@ -150,16 +207,69 @@ export default function TenantConversationsDashboard() {
                 </p>
               </div>
 
-              {conv.transcript && (
-                <div className="border-t border-white/5 pt-3">
-                  <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-2 font-mono">
-                    Transcript Core Data Stream
-                  </span>
-                  <pre className="text-xs text-zinc-400 font-mono bg-black/20 p-3 rounded-xl overflow-x-auto max-h-40 whitespace-pre-wrap leading-relaxed border border-white/[0.01]">
-                    {conv.transcript}
-                  </pre>
-                </div>
-              )}
+              {(() => {
+                const turns = parseTranscript(conv.transcript ?? conv.messages);
+                if (turns.length === 0) return null;
+                return (
+                  <div className="border-t border-white/5 pt-3">
+                    <span className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold block mb-2 font-mono">
+                      Conversation Transcript
+                    </span>
+
+                    {/* 📱 PHONE-STYLE CHAT THREAD */}
+                    <div className="rounded-2xl bg-black/40 border border-white/[0.04] overflow-hidden">
+                      {/* phone status bar */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-white/[0.03] border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-gradient-to-tr from-emerald-500/30 to-zinc-700 border border-white/10 flex items-center justify-center text-[9px] font-black text-emerald-300">
+                            AI
+                          </span>
+                          <span className="text-[11px] font-bold text-zinc-200">
+                            {conv.fullName ||
+                              conv.leadMetadata?.fullName ||
+                              "Site Visitor"}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-600">
+                          {turns.length} msgs
+                        </span>
+                      </div>
+
+                      {/* message stream */}
+                      <div className="p-4 space-y-2.5 max-h-72 overflow-y-auto">
+                        {turns.map((turn, idx) => {
+                          const isUser = turn.role === "user";
+                          return (
+                            <div
+                              key={idx}
+                              className={`flex ${
+                                isUser ? "justify-end" : "justify-start"
+                              }`}
+                            >
+                              <div
+                                className={`max-w-[78%] px-3.5 py-2 text-xs leading-relaxed whitespace-pre-wrap shadow-md ${
+                                  isUser
+                                    ? "bg-[#d4ff33] text-black rounded-2xl rounded-br-md font-medium"
+                                    : "bg-zinc-800 text-zinc-100 rounded-2xl rounded-bl-md border border-white/5"
+                                }`}
+                              >
+                                <span
+                                  className={`block text-[8px] uppercase tracking-widest font-black mb-0.5 ${
+                                    isUser ? "text-black/50" : "text-emerald-400"
+                                  }`}
+                                >
+                                  {isUser ? "Visitor" : "Assistant"}
+                                </span>
+                                {turn.content}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           ))}
 

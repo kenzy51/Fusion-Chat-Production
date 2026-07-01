@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import {  ChevronLeft, ChevronRight, Cpu, LogOut,MessageCircle  } from "lucide-react";
+import {  ChevronLeft, ChevronRight, Cpu, LogOut,MessageCircle, Radio, Settings  } from "lucide-react";
 import { BASE_URL } from "@/app/login/page";
 
 const menuItems = [
-  { name: "Bot Config", icon: Cpu, href: "/config" }, 
-  { name: "Conversations", icon: MessageCircle, href: "/conversations" }, 
+  { name: "Bot Config", icon: Cpu, href: "/config" },
+  { name: "Conversations", icon: MessageCircle, href: "/conversations" },
+  { name: "Sessions", icon: Radio, href: "/sessions" },
+  { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export function Sidebar() {
